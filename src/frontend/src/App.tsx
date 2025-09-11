@@ -62,7 +62,7 @@ const App: React.FC = () => {
     await authClient.login({
       identityProvider: import.meta.env.DFX_NETWORK === 'ic' 
         ? 'https://identity.ic0.app/#authorize'
-        : 'http://127.0.0.1:4943/?canisterId=bkyz2-fmaaa-aaaah-qaaaq-cai',
+        : 'http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai',
       onSuccess: () => handleAuthenticated(authClient),
     });
   };
