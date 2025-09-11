@@ -123,3 +123,80 @@ The project is configured to work with:
 - All Bitcoin operations use the testnet network for safety
 - The frontend uses Vite for fast development and optimized production builds
 - Candid bindings are auto-generated and should be regenerated after backend changes
+
+## Critical Development Guidelines
+
+### NEVER Manually Edit Declaration Files
+**IMPORTANT**: Never manually edit files in `src/declarations/` directory:
+- `backend.did` - Candid interface definition
+- `backend.did.js` - JavaScript interface bindings  
+- `*.ts` - TypeScript declaration files
+
+These files are auto-generated during deployment (`dfx deploy` or `dfx generate`) and any manual changes will be **overwritten**. 
+
+If functions are missing from declarations:
+1. Fix the Rust code to ensure proper Candid export
+2. Use simple, Candid-compatible return types (String, Nat, etc.)
+3. Avoid complex custom enums that may not export properly
+4. Redeploy to regenerate declarations automatically
+
+### Candid Export Best Practices
+
+**Modern Candid Generation (ic-cdk v0.11.0+)**:
+The project uses `ic_cdk::export_candid!()` macro for automatic Candid generation. This is the current standard approach as of 2024.
+
+**Proper Function Export Requirements**:
+1. Functions MUST have `#[query]` or `#[update]` annotations
+2. The `ic_cdk::export_candid!()` macro MUST be present at end of `lib.rs`
+3. Function signatures must use Candid-compatible types
+4. All custom types need `#[derive(CandidType, Serialize, Deserialize)]`
+
+**Troubleshooting Missing Functions in Candid Interface**:
+If functions work via `dfx canister call` but don't appear in generated `.did` files:
+
+1. **Check Tool Installation**:
+   ```bash
+   cargo install candid-extractor
+   ```
+
+2. **Manual Candid Extraction** (for debugging):
+   ```bash
+   # Build the canister
+   cargo build --release --target wasm32-unknown-unknown --package backend
+   
+   # Extract Candid manually
+   candid-extractor target/wasm32-unknown-unknown/release/backend.wasm > backend_manual.did
+   ```
+
+3. **Common Issues**:
+   - Missing `#[query]` or `#[update]` annotations
+   - Function not public (`pub fn`)
+   - Complex return types that don't export properly
+   - Missing `ic_cdk::export_candid!()` macro
+
+4. **Fix Patterns**:
+   - Use `Result<T, String>` instead of custom enums
+   - Ensure all custom types derive CandidType
+   - Keep function signatures simple and Candid-compatible
+
+**Testing Candid Export**:
+```bash
+# Test function exists in canister
+dfx canister call backend function_name
+
+# Check if function appears in generated interface
+cat src/declarations/backend/backend.did
+
+# Manual extraction for comparison (shows what SHOULD be generated)
+candid-extractor target/wasm32-unknown-unknown/release/backend.wasm
+```
+
+**Known Issues**:
+- **DFX Candid Generation Bug**: As of dfx 0.29.1, `dfx generate` has a bug where it doesn't extract all functions from WASM files that `candid-extractor` can properly extract
+- **Workaround**: The deployment script uses `candid-extractor` manually to ensure complete Candid interfaces
+- **Verification**: Always compare `dfx generate` output with `candid-extractor` output to confirm completeness
+
+**Version Information**:
+- Current project dfx version: 0.29.1
+- candid-extractor works correctly and shows complete interface
+- Issue persists across dfx versions 0.28.0 → 0.29.1

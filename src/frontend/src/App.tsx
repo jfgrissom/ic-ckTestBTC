@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [principal, setPrincipal] = useState<string>('');
   const [sendAmount, setSendAmount] = useState('');
   const [sendTo, setSendTo] = useState('');
+  const [btcAddress, setBtcAddress] = useState<string>('');
 
   useEffect(() => {
     initAuth();
@@ -34,16 +35,16 @@ const App: React.FC = () => {
     const identity = client.getIdentity();
     const agent = new HttpAgent({
       identity,
-      host: import.meta.env.DFX_NETWORK === 'ic' ? 'https://ic0.app' : 'http://127.0.0.1:4943',
+      host: import.meta.env.VITE_DFX_NETWORK === 'ic' ? 'https://ic0.app' : 'http://127.0.0.1:4943',
     });
 
-    if (import.meta.env.DFX_NETWORK !== 'ic') {
+    if (import.meta.env.VITE_DFX_NETWORK !== 'ic') {
       await agent.fetchRootKey();
     }
 
     const backendActor = Actor.createActor(idlFactory, {
       agent,
-      canisterId: import.meta.env.CANISTER_ID_BACKEND || '',
+      canisterId: import.meta.env.VITE_CANISTER_ID_BACKEND || '',
     });
 
     setBackend(backendActor);
@@ -54,15 +55,18 @@ const App: React.FC = () => {
     
     // Load initial data
     await loadBalance(backendActor);
+    await loadBtcAddress(backendActor);
   };
 
   const login = async () => {
     if (!authClient) return;
 
+    const identityProvider = import.meta.env.VITE_DFX_NETWORK === 'ic' 
+      ? 'https://identity.ic0.app'
+      : `http://${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY}.localhost:4943/`;
+
     await authClient.login({
-      identityProvider: import.meta.env.DFX_NETWORK === 'ic' 
-        ? 'https://identity.ic0.app/#authorize'
-        : 'http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaaa-aaadq-cai',
+      identityProvider,
       onSuccess: () => handleAuthenticated(authClient),
     });
   };
@@ -93,6 +97,19 @@ const App: React.FC = () => {
       console.error('Failed to load balance:', error);
     }
     setLoading(false);
+  };
+
+  const loadBtcAddress = async (actor: any) => {
+    try {
+      const result = await actor.get_btc_address();
+      if ('Ok' in result) {
+        setBtcAddress(result.Ok);
+      } else {
+        console.error('Error getting BTC address:', result.Err);
+      }
+    } catch (error) {
+      console.error('Failed to load BTC address:', error);
+    }
   };
 
 
@@ -153,6 +170,29 @@ const App: React.FC = () => {
           <button onClick={() => loadBalance(backend)} disabled={loading}>
             Refresh Balance
           </button>
+          {import.meta.env.VITE_DFX_NETWORK === 'local' && (
+            <button 
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const result = await backend.faucet();
+                  if ('Ok' in result) {
+                    alert(result.Ok);
+                    await loadBalance(backend);
+                  } else {
+                    alert(`Error: ${result.Err}`);
+                  }
+                } catch (error: any) {
+                  alert(`Failed to get test tokens: ${error.message}`);
+                }
+                setLoading(false);
+              }} 
+              disabled={loading}
+              style={{ marginLeft: '10px', backgroundColor: '#28a745' }}
+            >
+              Get Test Tokens (Faucet)
+            </button>
+          )}
         </div>
 
 
@@ -185,15 +225,38 @@ const App: React.FC = () => {
 
         <div className="receive-section">
           <h2>Receive ckTestBTC</h2>
-          <p>Your receiving address (Principal ID):</p>
-          <div className="address-display">
-            {principal}
-            <button 
-              onClick={() => navigator.clipboard.writeText(principal)}
-              className="copy-btn"
-            >
-              Copy
-            </button>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <p><strong>Bitcoin Testnet Address:</strong></p>
+            <div className="address-display">
+              {btcAddress || 'Loading...'}
+              <button 
+                onClick={() => navigator.clipboard.writeText(btcAddress)}
+                className="copy-btn"
+                disabled={!btcAddress}
+              >
+                Copy BTC Address
+              </button>
+            </div>
+            <p style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
+              Send testnet BTC to this address to receive ckTestBTC
+            </p>
+          </div>
+
+          <div>
+            <p><strong>IC Principal ID:</strong></p>
+            <div className="address-display">
+              {principal}
+              <button 
+                onClick={() => navigator.clipboard.writeText(principal)}
+                className="copy-btn"
+              >
+                Copy Principal
+              </button>
+            </div>
+            <p style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
+              Use this for direct ckTestBTC transfers within IC
+            </p>
           </div>
         </div>
       </main>
