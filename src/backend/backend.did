@@ -1,0 +1,26 @@
+type Account = record {
+  owner : principal;
+  subaccount : opt blob;
+};
+
+type TransferError = variant {
+  BadFee : record { expected_fee : nat };
+  BadBurn : record { min_burn_amount : nat };
+  InsufficientFunds : record { balance : nat };
+  TooOld;
+  CreatedInFuture : record { ledger_time : nat64 };
+  Duplicate : record { duplicate_of : nat };
+  TemporarilyUnavailable;
+  GenericError : record { error_code : nat; message : text };
+};
+
+type Result = variant {
+  Ok : nat;
+  Err : text;
+};
+
+service : {
+  "get_balance": () -> (Result);
+  "transfer": (principal, nat) -> (Result);
+  "get_principal": () -> (principal) query;
+}

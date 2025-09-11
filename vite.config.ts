@@ -1,0 +1,35 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import environment from 'vite-plugin-environment';
+import path from 'path';
+
+export default defineConfig({
+  root: 'src/frontend',
+  publicDir: 'public',
+  build: {
+    outDir: '../../dist/frontend',
+    emptyOutDir: true,
+  },
+  plugins: [
+    react(),
+    environment('all', { prefix: 'CANISTER_' }),
+    environment('all', { prefix: 'DFX_' }),
+  ],
+  define: {
+    global: 'globalThis',
+    'process.env': {}
+  },
+  resolve: {
+    alias: {
+      'declarations': path.resolve(__dirname, 'src/declarations'),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:4943',
+        changeOrigin: true,
+      },
+    },
+  },
+});
