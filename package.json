@@ -15,6 +15,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "generate": "echo '⚠️  Use npm run dfx:generate instead (fixes DFX bug)' && ./scripts/generate-declarations.sh",
+    "update:env": "./scripts/update-env.sh",
     "lint:rust": "cargo clippy --manifest-path src/backend/Cargo.toml --target wasm32-unknown-unknown -- -D warnings",
     "format:rust": "cargo fmt --manifest-path src/backend/Cargo.toml"
   },

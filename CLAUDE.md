@@ -22,14 +22,16 @@ This is an Internet Computer (IC) project that provides a web interface for mana
 
 ### Frontend (React TypeScript)
 - **Location**: `src/frontend/`
-- **Language**: TypeScript with React
+- **Language**: TypeScript with React (Functional Components)
 - **Build Tool**: Vite
 - **Purpose**: Web interface for wallet management
+- **Architecture**: Modular component-based with hooks and services
 - **Main Features**:
-  - Add/remove wallet addresses
-  - Check balances
-  - View transaction history
-  - Display network fee information
+  - Internet Identity authentication
+  - ckTestBTC balance management
+  - Send/receive ckTestBTC transactions
+  - Bitcoin testnet address integration
+  - Faucet functionality (local development)
 
 ### ckTestBTC Integration
 The backend canister communicates with the ckTestBTC canister at `g4xu7-jiaaa-aaaan-aaaaq-cai` which provides:
@@ -91,12 +93,39 @@ ic-ckTestBTC/
 │   │   ├── src/lib.rs    # Main canister logic
 │   │   ├── backend.did   # Candid interface
 │   │   └── Cargo.toml    # Rust dependencies
-│   └── frontend/          # React frontend
+│   └── frontend/          # React frontend (Modular Architecture)
 │       ├── src/
-│       │   ├── App.tsx   # Main application component
-│       │   ├── main.tsx  # Entry point
-│       │   └── *.css     # Styling
-│       └── public/       # Static assets
+│       │   ├── components/          # Reusable UI components
+│       │   │   ├── auth/           # Authentication components
+│       │   │   │   ├── LoginScreen.tsx
+│       │   │   │   ├── LoginScreen.css
+│       │   │   │   ├── UserHeader.tsx
+│       │   │   │   └── UserHeader.css
+│       │   │   └── wallet/         # Wallet components
+│       │   │       ├── BalanceSection.tsx
+│       │   │       ├── BalanceSection.css
+│       │   │       ├── SendSection.tsx
+│       │   │       ├── SendSection.css
+│       │   │       ├── ReceiveSection.tsx
+│       │   │       └── ReceiveSection.css
+│       │   ├── hooks/              # Custom React hooks
+│       │   │   ├── useAuth.ts      # Authentication management
+│       │   │   ├── useWallet.ts    # Wallet operations
+│       │   │   └── useBackend.ts   # Backend actor management
+│       │   ├── services/           # Business logic services
+│       │   │   ├── auth.service.ts # Authentication service
+│       │   │   ├── wallet.service.ts # Wallet operations service
+│       │   │   └── backend.service.ts # Backend communication
+│       │   ├── types/              # TypeScript interfaces
+│       │   │   ├── auth.types.ts   # Authentication types
+│       │   │   ├── wallet.types.ts # Wallet types
+│       │   │   └── backend.types.ts # Backend types
+│       │   ├── utils/              # Utility functions
+│       │   │   └── error-filter.ts # Error filtering system
+│       │   ├── App.tsx             # Main application (orchestrator)
+│       │   ├── App.css             # Global styles
+│       │   └── main.tsx            # Entry point
+│       └── public/                 # Static assets
 ├── dfx.json              # DFX configuration
 ├── package.json          # Node.js dependencies
 └── vite.config.ts        # Vite configuration
@@ -117,12 +146,58 @@ The project is configured to work with:
 - **IC mainnet**: Can be deployed to Internet Computer mainnet
 - **ckTestBTC canister**: Hardcoded to `g4xu7-jiaaa-aaaan-aaaaq-cai` (testnet Bitcoin integration)
 
+## Frontend Architecture (Modular Design)
+
+### Component Architecture
+The frontend follows a **functional component architecture** with clear separation of concerns:
+
+**Key Principles:**
+- **Functional Components Only**: No class-based components - all React components use functional syntax with hooks
+- **Custom Hooks**: Business logic encapsulated in reusable hooks (`useAuth`, `useWallet`, `useBackend`)
+- **Service Layer**: Backend communication and business logic separated into service classes
+- **Type Safety**: Comprehensive TypeScript interfaces for all data structures
+- **Component Composition**: Small, focused components that compose into larger features
+
+### Layer Responsibilities
+
+1. **Components (`src/components/`)**
+   - Pure UI rendering and user interaction
+   - Receive data and callbacks as props
+   - No direct backend communication or business logic
+   - Component-specific CSS modules for styling
+
+2. **Hooks (`src/hooks/`)**
+   - State management and side effects
+   - Orchestrate service layer calls
+   - Provide clean APIs to components
+   - Handle React lifecycle events
+
+3. **Services (`src/services/`)**
+   - Backend communication logic
+   - Business logic implementation  
+   - Singleton pattern for shared state
+   - Error handling and data transformation
+
+4. **Types (`src/types/`)**
+   - TypeScript interface definitions
+   - Network configuration utilities
+   - Prop and state type definitions
+   - Ensure type safety across layers
+
+### Error Handling
+- **Browser Extension Error Filtering**: Intelligent error classification system that filters out extension-related errors while preserving application errors
+- **User-Friendly Error Reporting**: Clean error boundaries that don't break on external script issues
+- **Development Console Filtering**: Clean development experience with error type classification
+
 ## Important Notes
 
 - The backend canister stores wallet information locally but gets real-time data from the ckTestBTC canister
 - All Bitcoin operations use the testnet network for safety
 - The frontend uses Vite for fast development and optimized production builds
 - Candid bindings are auto-generated and should be regenerated after backend changes
+- **Architecture is fully functional-based** - no class components used anywhere in the codebase
+- **Modular design** allows easy extension and maintenance of wallet features
+- **Generated Types Integration** - Backend types use auto-generated declarations to prevent type drift
 
 ## Critical Development Guidelines
 

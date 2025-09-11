@@ -19,7 +19,7 @@ const CKTESTBTC_CANISTER: &str = match option_env!("CKTESTBTC_CANISTER_ID") {
 
 const LOCAL_TOKEN_CANISTER: &str = match option_env!("LOCAL_TOKEN_CANISTER_ID") {
     Some(id) => id,
-    None => "ucwa4-rx777-77774-qaada-cai", // Fallback to last known local token ID
+    None => "ulvla-h7777-77774-qaacq-cai", // Current local token canister ID
 };
 
 // Helper function to detect if we're running locally

@@ -40,4 +40,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Update environment variables with current canister IDs
+echo -e "${GREEN}Updating environment variables...${NC}"
+./scripts/update-env.sh
+
+# Check if env update was successful
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Environment variable update failed${NC}"
+    exit 1
+fi
+
 echo -e "${GREEN}✅ Backend deployment complete!${NC}"
