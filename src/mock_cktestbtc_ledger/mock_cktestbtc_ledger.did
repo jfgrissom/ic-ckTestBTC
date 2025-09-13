@@ -1,0 +1,126 @@
+type BlockIndex = nat;
+type Subaccount = blob;
+// Number of nanoseconds since the UNIX epoch in UTC timezone.
+type Timestamp = nat64;
+// Number of nanoseconds between two [Timestamp]s.
+type Duration = nat64;
+type Tokens = nat;
+type TxIndex = nat;
+type Allowance = record { allowance : nat; expires_at : opt Timestamp };
+type AllowanceArgs = record { account : Account; spender : Account };
+type Approve = record {
+  fee : opt nat;
+  from : Account;
+  memo : opt blob;
+  created_at_time : opt Timestamp;
+  amount : nat;
+  expected_allowance : opt nat;
+  expires_at : opt Timestamp;
+  spender : Account
+};
+type ApproveArgs = record {
+  fee : opt nat;
+  memo : opt blob;
+  from_subaccount : opt blob;
+  created_at_time : opt Timestamp;
+  amount : nat;
+  expected_allowance : opt nat;
+  expires_at : opt Timestamp;
+  spender : Account
+};
+type ApproveError = variant {
+  GenericError : record { message : text; error_code : nat };
+  TemporarilyUnavailable;
+  Duplicate : record { duplicate_of : BlockIndex };
+  BadFee : record { expected_fee : nat };
+  AllowanceChanged : record { current_allowance : nat };
+  CreatedInFuture : record { ledger_time : Timestamp };
+  TooOld;
+  Expired : record { ledger_time : Timestamp };
+  InsufficientFunds : record { balance : nat }
+};
+type ApproveResult = variant { Ok : BlockIndex; Err : ApproveError };
+
+type Account = record {
+  owner : principal;
+  subaccount : opt Subaccount
+};
+
+type TransferArg = record {
+  from_subaccount : opt Subaccount;
+  to : Account;
+  amount : Tokens;
+  fee : opt Tokens;
+  memo : opt blob;
+  created_at_time : opt Timestamp
+};
+
+type TransferError = variant {
+  BadFee : record { expected_fee : Tokens };
+  BadBurn : record { min_burn_amount : Tokens };
+  InsufficientFunds : record { balance : Tokens };
+  TooOld;
+  CreatedInFuture : record { ledger_time : Timestamp };
+  TemporarilyUnavailable;
+  Duplicate : record { duplicate_of : BlockIndex };
+  GenericError : record { error_code : nat; message : text }
+};
+
+type TransferResult = variant {
+  Ok : BlockIndex;
+  Err : TransferError
+};
+
+// The value returned from the [icrc1_metadata] endpoint.
+type MetadataValue = variant {
+  Nat : nat;
+  Int : int;
+  Text : text;
+  Blob : blob
+};
+
+type StandardRecord = record { name : text; url : text };
+
+type TransferFromArgs = record {
+  spender_subaccount : opt blob;
+  from : Account;
+  to : Account;
+  amount : nat;
+  fee : opt nat;
+  memo : opt blob;
+  created_at_time : opt nat64;
+};
+
+type TransferFromError = variant {
+  BadFee : record { expected_fee : nat };
+  BadBurn : record { min_burn_amount : nat };
+  InsufficientFunds : record { balance : nat };
+  InsufficientAllowance : record { allowance : nat };
+  TooOld;
+  CreatedInFuture : record { ledger_time : nat64 };
+  Duplicate : record { duplicate_of : nat };
+  TemporarilyUnavailable;
+  GenericError : record { error_code : nat; message : text };
+};
+
+type TransferFromResult = variant {
+  Ok : nat;
+  Err : TransferFromError;
+};
+
+service : {
+  icrc1_name : () -> (text) query;
+  icrc1_symbol : () -> (text) query;
+  icrc1_decimals : () -> (nat8) query;
+  icrc1_metadata : () -> (vec record { text; MetadataValue }) query;
+  icrc1_total_supply : () -> (Tokens) query;
+  icrc1_fee : () -> (Tokens) query;
+  icrc1_minting_account : () -> (opt Account) query;
+  icrc1_balance_of : (Account) -> (Tokens) query;
+  icrc1_transfer : (TransferArg) -> (TransferResult);
+  icrc1_supported_standards : () -> (vec StandardRecord) query;
+
+  icrc2_approve : (ApproveArgs) -> (ApproveResult);
+  icrc2_allowance : (AllowanceArgs) -> (Allowance) query;
+  icrc2_transfer_from : (TransferFromArgs) -> (TransferFromResult);
+}

@@ -1,3 +1,8 @@
+// WARNING: BITCOIN TESTNET4 (TestBTC) ONLY - NO MAINNET BITCOIN
+// This backend canister handles only ckTestBTC operations for Bitcoin testnet4 (TestBTC).
+// It communicates with mock_cktestbtc_ledger and mock_cktestbtc_minter in local development.
+// NEVER processes mainnet Bitcoin (BTC) transactions.
+
 use candid::{CandidType, Deserialize, Nat, Principal};
 use ic_cdk::api::call::CallResult;
 use ic_cdk::{caller, query, update};
@@ -17,9 +22,9 @@ const CKTESTBTC_CANISTER: &str = match option_env!("CKTESTBTC_CANISTER_ID") {
     None => "g4xu7-jiaaa-aaaan-aaaaq-cai", // Default mainnet ckTestBTC
 };
 
-const LOCAL_TOKEN_CANISTER: &str = match option_env!("LOCAL_TOKEN_CANISTER_ID") {
+const LOCAL_TOKEN_CANISTER: &str = match option_env!("MOCK_CKTESTBTC_LEDGER_CANISTER_ID") {
     Some(id) => id,
-    None => "ulvla-h7777-77774-qaacq-cai", // Current local token canister ID
+    None => "ulvla-h7777-77774-qaacq-cai", // Current mock_cktestbtc_ledger canister ID
 };
 
 // Helper function to detect if we're running locally
@@ -155,7 +160,7 @@ async fn faucet() -> TextResult {
 async fn get_btc_address() -> TextResult {
     let caller_principal = caller();
     
-    // For local development, generate a mock testnet address
+    // For local development, generate a mock TestBTC address
     if is_local_development() {
         // Create a deterministic mock address based on the principal
         // Format: tb1q{hash_of_principal}... (testnet bech32 format)
@@ -166,20 +171,20 @@ async fn get_btc_address() -> TextResult {
         
         // Take first 20 bytes of hash and encode as hex for a mock address
         let addr_suffix = hex::encode(&hash[..20]);
-        let mock_address = format!("tb1q{}", &addr_suffix[..32]); // tb1q prefix for testnet
+        let mock_address = format!("tb1q{}", &addr_suffix[..32]); // tb1q prefix for TestBTC testnet
         
         return TextResult::Ok(mock_address);
     }
     
-    // For mainnet, we would call the ckTestBTC canister's btc_get_address equivalent
-    // The actual ckBTC/ckTestBTC uses a derivation path from the principal
+    // For IC mainnet, we would call the ckTestBTC canister's get_btc_address function
+    // The actual ckTestBTC uses a derivation path from the principal
     // This would involve calling something like:
     // let token_canister = get_token_canister()?;
     // let result: CallResult<(String,)> = ic_cdk::call(token_canister, "get_btc_address", (account,)).await;
     
-    // For now, return a placeholder for mainnet
+    // For now, return a placeholder for IC mainnet
     // In production, this would integrate with the actual ckTestBTC address derivation
-    TextResult::Ok(format!("tb1q_mainnet_address_for_{}", &caller_principal.to_text()[..8]))
+    TextResult::Ok(format!("tb1q_testbtc_address_for_{}", &caller_principal.to_text()[..8]))
 }
 
 ic_cdk::export_candid!();

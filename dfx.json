@@ -29,10 +29,20 @@
       },
       "frontend": {}
     },
-    "local_token": {
+    "mock_cktestbtc_ledger": {
       "type": "rust",
-      "package": "local_token",
-      "candid": "src/local_token/local_token.did"
+      "package": "mock_cktestbtc_ledger",
+      "candid": "src/mock_cktestbtc_ledger/mock_cktestbtc_ledger.did"
+    },
+    "mock_cktestbtc_minter": {
+      "type": "rust",
+      "package": "mock_cktestbtc_minter",
+      "candid": "src/mock_cktestbtc_minter/mock_cktestbtc_minter.did"
+    },
+    "mock_icp_ledger": {
+      "type": "rust",
+      "package": "mock_icp_ledger",
+      "candid": "src/mock_icp_ledger/mock_icp_ledger.did"
     }
   },
   "defaults": {

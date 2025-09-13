@@ -13,14 +13,14 @@ echo -e "${GREEN}Building backend canister...${NC}"
 # Export environment variables for build
 export CKTESTBTC_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"
 
-# Get the local token canister ID from dfx if it exists
+# Get the mock_cktestbtc_ledger canister ID from dfx if it exists
 if [ -f ".dfx/local/canister_ids.json" ]; then
-    LOCAL_TOKEN_ID=$(cat .dfx/local/canister_ids.json 2>/dev/null | grep -A1 '"local_token"' | grep '"local"' | cut -d'"' -f4)
-    if [ ! -z "$LOCAL_TOKEN_ID" ]; then
-        echo -e "${YELLOW}Found local_token canister ID: ${LOCAL_TOKEN_ID}${NC}"
-        export LOCAL_TOKEN_CANISTER_ID=$LOCAL_TOKEN_ID
+    MOCK_LEDGER_ID=$(cat .dfx/local/canister_ids.json 2>/dev/null | grep -A1 '"mock_cktestbtc_ledger"' | grep '"local"' | cut -d'"' -f4)
+    if [ ! -z "$MOCK_LEDGER_ID" ]; then
+        echo -e "${YELLOW}Found mock_cktestbtc_ledger canister ID: ${MOCK_LEDGER_ID}${NC}"
+        export MOCK_CKTESTBTC_LEDGER_CANISTER_ID=$MOCK_LEDGER_ID
     else
-        echo -e "${YELLOW}No local_token canister found, using default${NC}"
+        echo -e "${YELLOW}No mock_cktestbtc_ledger canister found, using default${NC}"
     fi
 fi
 

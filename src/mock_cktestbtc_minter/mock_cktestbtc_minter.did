@@ -1,0 +1,143 @@
+// WARNING: BITCOIN TESTNET4 (TestBTC) ONLY - NO MAINNET BITCOIN
+// Represents an account on the ckTestBTC ledger.
+type Account = record { owner : principal; subaccount : opt blob };
+
+type RetrieveBtcArgs = record {
+    // The address to which the ckTestBTC minter should deposit TestBTC.
+    address : text;
+    // The amount of ckTestBTC in Satoshis that the client wants to withdraw.
+    amount : nat64;
+};
+
+type RetrieveBtcError = variant {
+    // The minter failed to parse the destination address.
+    MalformedAddress : text;
+    // The minter is already processing another retrieval request for the same
+    // principal.
+    AlreadyProcessing;
+    // The withdrawal amount is too low.
+    // The payload contains the minimal withdrawal amount.
+    AmountTooLow : nat64;
+    // The ckTestBTC balance of the withdrawal account is too low.
+    InsufficientFunds : record { balance : nat64 };
+    // The minter is overloaded, retry the request.
+    // The payload contains a human-readable message explaining what caused the unavailability.
+    TemporarilyUnavailable : text;
+    // A generic error reserved for future extensions.
+    GenericError : record { error_message : text; error_code : nat64 };
+};
+
+type RetrieveBtcOk = record {
+    // Returns the burn transaction index corresponding to the withdrawal.
+    // You can use this index to query the withdrawal status.
+    block_index : nat64
+};
+
+// The result of an [update_balance] call.
+type UtxoStatus = variant {
+    // The minter ignored this UTXO because UTXO's value is too small to pay
+    // the check fees.
+    ValueTooSmall : Utxo;
+    // The Bitcoin checker considered this UTXO to be tainted.
+    Tainted : Utxo;
+    // The UTXO passed the Bitcoin check, but the minter failed to mint ckTestBTC
+    // because the Ledger was unavailable. Retrying the [update_balance] call
+    // should eventually advance the UTXO to the [Minted] state.
+    Checked : Utxo;
+    // The UTXO passed the Bitcoin check, and ckTestBTC has been minted.
+    Minted : record {
+        block_index : nat64;
+        minted_amount : nat64;
+        utxo : Utxo;
+    };
+};
+
+type Utxo = record {
+    outpoint : record { txid : blob; vout : nat32 };
+    value : nat64;
+    height : nat32;
+};
+
+type UpdateBalanceError = variant {
+    // There are no new UTXOs to process.
+    NoNewUtxos : record {
+        current_confirmations: opt nat32;
+        required_confirmations: nat32;
+    };
+    // The minter is already processing another update balance request for the caller.
+    AlreadyProcessing;
+    // The minter is overloaded, retry the request.
+    // The payload contains a human-readable message explaining what caused the unavailability.
+    TemporarilyUnavailable : text;
+    // A generic error reserved for future extensions.
+    GenericError : record { error_message : text; error_code : nat64 };
+};
+
+type BtcNetwork = variant {
+    // The public Bitcoin mainnet.
+    Mainnet;
+    // The public Bitcoin testnet.
+    Testnet;
+    // A local Bitcoin regtest installation.
+    Regtest;
+};
+
+type RetrieveBtcStatus = variant {
+    // The minter does not have any information on the specified
+    // retrieval request.
+    Unknown;
+    // The minter did not send a Bitcoin transaction for this request yet.
+    Pending;
+    // The minter is obtaining all required ECDSA signatures on the
+    // Bitcoin transaction for this request.
+    Signing;
+    // The minter signed the transaction and is waiting for a reply
+    // from the Bitcoin canister.
+    Sending : record { txid : blob };
+    // The minter sent a transaction for the retrieve request.
+    Submitted : record { txid : blob };
+    // The amount was too low to cover the transaction fees.
+    AmountTooLow;
+    // The minter received enough confirmations for the Bitcoin
+    // transaction for this request.
+    Confirmed : record { txid : blob };
+};
+
+service : {
+    // Section "Convert TestBTC to ckTestBTC" {{{
+
+    // Returns the Bitcoin testnet address to which the owner should send TestBTC
+    // before converting the amount to ckTestBTC using the [update_balance]
+    // endpoint.
+    get_btc_address : (record { owner: opt principal; subaccount : opt blob }) -> (text);
+
+    // Returns UTXOs of the given account known by the minter (with no
+    // guarantee in the ordering of the returned values).
+    get_known_utxos: (record { owner: opt principal; subaccount : opt blob }) -> (vec Utxo) query;
+
+    // Mints ckTestBTC for newly deposited UTXOs.
+    update_balance : (record { owner: opt principal; subaccount : opt blob }) -> (variant { Ok : vec UtxoStatus; Err : UpdateBalanceError });
+
+    // }}} Section "Convert TestBTC to ckTestBTC"
+
+    // Section "Convert ckTestBTC to TestBTC" {{{
+
+    /// Returns an estimate of the user's fee (in Satoshi) for a
+    /// retrieve_btc request based on the current status of the Bitcoin network.
+    estimate_withdrawal_fee : (record { amount : opt nat64 }) -> (record { bitcoin_fee : nat64; minter_fee : nat64 }) query;
+
+    /// Returns the fee that the minter will charge for a bitcoin deposit.
+    get_deposit_fee: () -> (nat64) query;
+
+    // Returns the account to which the caller should deposit ckTestBTC
+    // before withdrawing TestBTC using the [retrieve_btc] endpoint.
+    get_withdrawal_account : () -> (Account);
+
+    // Submits a request to convert ckTestBTC to TestBTC.
+    retrieve_btc : (RetrieveBtcArgs) -> (variant { Ok : RetrieveBtcOk; Err : RetrieveBtcError });
+
+    // Returns the status of a TestBTC retrieval request.
+    retrieve_btc_status : (record { block_index : nat64 }) -> (RetrieveBtcStatus) query;
+
+    // }}} Section "Convert ckTestBTC to TestBTC"
+}

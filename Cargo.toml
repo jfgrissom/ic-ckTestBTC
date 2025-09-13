@@ -1,5 +1,9 @@
 [workspace]
-members = ["src/backend", "src/local_token"]
+members = [
+    "src/backend", 
+    "src/mock_cktestbtc_ledger",
+    "src/mock_cktestbtc_minter"
+]
 resolver = "2"
 
 [profile.release]

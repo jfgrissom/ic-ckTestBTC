@@ -2,11 +2,11 @@
 
 # Build script to pass canister IDs as environment variables during compilation
 
-# Get the local token canister ID from dfx
+# Get the mock_cktestbtc_ledger canister ID from dfx
 if [ -f ".dfx/local/canister_ids.json" ]; then
-    LOCAL_TOKEN_ID=$(cat .dfx/local/canister_ids.json | grep -A1 '"local_token"' | grep '"local"' | cut -d'"' -f4)
-    echo "Found local_token canister ID: $LOCAL_TOKEN_ID"
-    export LOCAL_TOKEN_CANISTER_ID=$LOCAL_TOKEN_ID
+    MOCK_LEDGER_ID=$(cat .dfx/local/canister_ids.json | grep -A1 '"mock_cktestbtc_ledger"' | grep '"local"' | cut -d'"' -f4)
+    echo "Found mock_cktestbtc_ledger canister ID: $MOCK_LEDGER_ID"
+    export MOCK_CKTESTBTC_LEDGER_CANISTER_ID=$MOCK_LEDGER_ID
 fi
 
 # Export other canister IDs if needed
