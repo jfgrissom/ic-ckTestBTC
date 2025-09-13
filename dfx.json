@@ -51,6 +51,11 @@
       "packtool": ""
     }
   },
+  "env": {
+    "LOCAL_MOCK_LEDGER_CANISTER_ID": "umunu-kh777-77774-qaaca-cai",
+    "LOCAL_MOCK_MINTER_CANISTER_ID": "ulvla-h7777-77774-qaacq-cai",
+    "IC_CKTESTBTC_CANISTER_ID": "g4xu7-jiaaa-aaaan-aaaaq-cai"
+  },
   "networks": {
     "local": {
       "bind": "127.0.0.1:4943",

@@ -10,7 +10,7 @@
     "dfx:deploy:all": "dfx deploy",
     "dfx:generate": "./scripts/generate-declarations.sh",
     "dfx:stop": "dfx stop",
-    "dfx:setup": "npm run dfx:create && npm run dfx:deploy",
+    "dfx:setup": "npm run dfx:create && npm run update:env && npm run dfx:deploy",
     "predev": "npm run dfx:setup",
     "dev": "vite",
     "build": "vite build",

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ReceiveSectionProps } from '../../types/wallet.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { ForwardRefButton } from '@/components/common/ForwardRefButton';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -64,7 +64,7 @@ const ReceiveSection: React.FC<ReceiveSectionProps> = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
+                    <ForwardRefButton
                       onClick={handleCopyBtc}
                       disabled={!btcAddress}
                       size="sm"
@@ -82,7 +82,7 @@ const ReceiveSection: React.FC<ReceiveSectionProps> = ({
                           Copy
                         </>
                       )}
-                    </Button>
+                    </ForwardRefButton>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Copy Bitcoin testnet address</p>
@@ -113,7 +113,7 @@ const ReceiveSection: React.FC<ReceiveSectionProps> = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
+                    <ForwardRefButton
                       onClick={handleCopyPrincipal}
                       size="sm"
                       variant="outline"
@@ -130,7 +130,7 @@ const ReceiveSection: React.FC<ReceiveSectionProps> = ({
                           Copy
                         </>
                       )}
-                    </Button>
+                    </ForwardRefButton>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Copy Principal ID</p>

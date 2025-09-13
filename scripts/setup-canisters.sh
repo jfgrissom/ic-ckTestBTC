@@ -53,6 +53,39 @@ else
     echo -e "${GREEN}✓ Internet Identity already installed${NC}"
 fi
 
+# Deploy mock canisters if they don't have WASM modules installed
+echo -e "${YELLOW}Checking mock canister deployments...${NC}"
+
+# Check and deploy mock_cktestbtc_ledger
+LEDGER_STATUS=$(dfx canister status mock_cktestbtc_ledger 2>/dev/null | grep "Module hash:" | cut -d: -f2 | tr -d ' ')
+if [ "$LEDGER_STATUS" = "None" ]; then
+    echo -e "${YELLOW}Deploying mock_cktestbtc_ledger WASM...${NC}"
+    dfx deploy mock_cktestbtc_ledger
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Mock ckTestBTC Ledger deployed successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to deploy mock_cktestbtc_ledger${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ Mock ckTestBTC Ledger already deployed${NC}"
+fi
+
+# Check and deploy mock_cktestbtc_minter
+MINTER_STATUS=$(dfx canister status mock_cktestbtc_minter 2>/dev/null | grep "Module hash:" | cut -d: -f2 | tr -d ' ')
+if [ "$MINTER_STATUS" = "None" ]; then
+    echo -e "${YELLOW}Deploying mock_cktestbtc_minter WASM...${NC}"
+    dfx deploy mock_cktestbtc_minter
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Mock ckTestBTC Minter deployed successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to deploy mock_cktestbtc_minter${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ Mock ckTestBTC Minter already deployed${NC}"
+fi
+
 # Verify all canisters were created successfully
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ All canisters are ready!${NC}"

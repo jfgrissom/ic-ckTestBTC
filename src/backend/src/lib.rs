@@ -17,14 +17,14 @@ pub enum TextResult {
 }
 
 // Get canister IDs from environment variables at compile time, with fallbacks
-const CKTESTBTC_CANISTER: &str = match option_env!("CKTESTBTC_CANISTER_ID") {
+const IC_CKTESTBTC_CANISTER: &str = match option_env!("IC_CKTESTBTC_CANISTER_ID") {
     Some(id) => id,
     None => "g4xu7-jiaaa-aaaan-aaaaq-cai", // Default mainnet ckTestBTC
 };
 
-const LOCAL_TOKEN_CANISTER: &str = match option_env!("MOCK_CKTESTBTC_LEDGER_CANISTER_ID") {
+const LOCAL_MOCK_LEDGER_CANISTER: &str = match option_env!("LOCAL_MOCK_LEDGER_CANISTER_ID") {
     Some(id) => id,
-    None => "ulvla-h7777-77774-qaacq-cai", // Current mock_cktestbtc_ledger canister ID
+    None => "", // Will be set dynamically by deployment script
 };
 
 // Helper function to detect if we're running locally
@@ -37,9 +37,12 @@ fn is_local_development() -> bool {
 // Get the appropriate token canister based on environment
 fn get_token_canister() -> Result<Principal, String> {
     if is_local_development() {
-        Principal::from_text(LOCAL_TOKEN_CANISTER).map_err(|e| format!("Invalid local token principal: {e}"))
+        if LOCAL_MOCK_LEDGER_CANISTER.is_empty() {
+            return Err("LOCAL_MOCK_LEDGER_CANISTER_ID environment variable not set".to_string());
+        }
+        Principal::from_text(LOCAL_MOCK_LEDGER_CANISTER).map_err(|e| format!("Invalid local mock ledger principal: {e}"))
     } else {
-        Principal::from_text(CKTESTBTC_CANISTER).map_err(|e| format!("Invalid ckTestBTC principal: {e}"))
+        Principal::from_text(IC_CKTESTBTC_CANISTER).map_err(|e| format!("Invalid IC ckTestBTC principal: {e}"))
     }
 }
 

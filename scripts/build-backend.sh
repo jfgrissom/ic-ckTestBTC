@@ -10,19 +10,52 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Building backend canister...${NC}"
 
-# Export environment variables for build
-export CKTESTBTC_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"
+# Load environment variables from dfx.json - ensuring persistence across DFX restarts
+if [ -z "$LOCAL_MOCK_LEDGER_CANISTER_ID" ]; then
+    echo -e "${YELLOW}Environment variables not set in current shell, loading from persistent storage...${NC}"
 
-# Get the mock_cktestbtc_ledger canister ID from dfx if it exists
-if [ -f ".dfx/local/canister_ids.json" ]; then
-    MOCK_LEDGER_ID=$(cat .dfx/local/canister_ids.json 2>/dev/null | grep -A1 '"mock_cktestbtc_ledger"' | grep '"local"' | cut -d'"' -f4)
-    if [ ! -z "$MOCK_LEDGER_ID" ]; then
-        echo -e "${YELLOW}Found mock_cktestbtc_ledger canister ID: ${MOCK_LEDGER_ID}${NC}"
-        export MOCK_CKTESTBTC_LEDGER_CANISTER_ID=$MOCK_LEDGER_ID
+    # Always try to load from dfx.json first (primary method for persistence)
+    if command -v jq &> /dev/null && [ -f "dfx.json" ]; then
+        echo -e "${YELLOW}Loading environment variables from dfx.json...${NC}"
+        eval "$(jq -r '.env | to_entries[] | "export \(.key)=\"\(.value)\""' dfx.json)"
+
+        if [ ! -z "$LOCAL_MOCK_LEDGER_CANISTER_ID" ]; then
+            echo -e "${GREEN}✅ Environment variables loaded from dfx.json persistent storage${NC}"
+        else
+            echo -e "${YELLOW}⚠️  dfx.json env section is empty, attempting fallback...${NC}"
+        fi
     else
-        echo -e "${YELLOW}No mock_cktestbtc_ledger canister found, using default${NC}"
+        echo -e "${YELLOW}⚠️  jq not available or dfx.json not found, attempting fallback...${NC}"
+    fi
+
+    # Fallback: get canister IDs directly and update dfx.json
+    if [ -z "$LOCAL_MOCK_LEDGER_CANISTER_ID" ]; then
+        echo -e "${YELLOW}Attempting to get canister IDs directly and update persistent storage...${NC}"
+        MOCK_LEDGER_ID=$(dfx canister id mock_cktestbtc_ledger 2>/dev/null)
+        if [ ! -z "$MOCK_LEDGER_ID" ]; then
+            export LOCAL_MOCK_LEDGER_CANISTER_ID=$MOCK_LEDGER_ID
+            export IC_CKTESTBTC_CANISTER_ID="${IC_CKTESTBTC_CANISTER_ID:-g4xu7-jiaaa-aaaan-aaaaq-cai}"
+            echo -e "${YELLOW}Found canister ID: ${MOCK_LEDGER_ID}, updating persistent storage...${NC}"
+            # Update dfx.json for future builds
+            if command -v jq &> /dev/null; then
+                jq --arg ledger_id "$MOCK_LEDGER_ID" --arg ic_id "${IC_CKTESTBTC_CANISTER_ID}" '.env.LOCAL_MOCK_LEDGER_CANISTER_ID = $ledger_id | .env.IC_CKTESTBTC_CANISTER_ID = $ic_id' dfx.json > dfx_temp.json && mv dfx_temp.json dfx.json
+                echo -e "${GREEN}✅ dfx.json persistent storage updated${NC}"
+            fi
+        else
+            echo -e "${RED}❌ Could not find mock_cktestbtc_ledger canister ID${NC}"
+            echo -e "${YELLOW}Run 'npm run dfx:create' first to create canisters, then 'npm run update:env' to set environment variables${NC}"
+            exit 1
+        fi
     fi
 fi
+
+# Ensure all required environment variables are set
+export LOCAL_MOCK_LEDGER_CANISTER_ID="${LOCAL_MOCK_LEDGER_CANISTER_ID}"
+export IC_CKTESTBTC_CANISTER_ID="${IC_CKTESTBTC_CANISTER_ID:-g4xu7-jiaaa-aaaan-aaaaq-cai}"
+
+echo -e "${YELLOW}Building with environment variables:${NC}"
+echo -e "${YELLOW}  LOCAL_MOCK_LEDGER_CANISTER_ID=${LOCAL_MOCK_LEDGER_CANISTER_ID}${NC}"
+echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
 
 # Build the backend without deploying
 echo -e "${GREEN}Building backend canister WASM...${NC}"

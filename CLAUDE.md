@@ -310,3 +310,231 @@ import { setupErrorFiltering, cn } from '@/lib'
 ```
 
 This convention applies to all utility modules in the frontend codebase.
+
+# Specialized Agent Workflow
+
+This project uses a specialized agent ecosystem for optimal development efficiency and modular architecture. When working on tasks, Claude Code should automatically invoke appropriate specialists to ensure expert handling and comprehensive documentation.
+
+## Agent Ecosystem Overview
+
+The project maintains 8 specialized agents, each focused on specific domains:
+
+- **Feature Management Specialist** (`.claude/feature-management-specialist.md`) - Feature tracking and FEATURES.md maintenance
+- **IC/DFX Specialist** (`.claude/ic-dfx-specialist.md`) - Internet Computer infrastructure and deployment
+- **Rust Backend Specialist** (`.claude/rust-backend-specialist.md`) - Modular backend development and ckTestBTC integration
+- **React Frontend Specialist** (`.claude/react-frontend-specialist.md`) - Functional React/TypeScript development
+- **Styling & Component Design Specialist** (`.claude/styling-component-specialist.md`) - UI/UX and ShadCN component architecture
+- **DevOps & Shell Scripting Specialist** (`.claude/devops-shell-specialist.md`) - Build automation, deployment scripts, and development workflow optimization
+- **Rust Testing Specialist** (`.claude/rust-testing-specialist.md`) - Backend testing and quality assurance
+- **Frontend Testing Specialist** (`.claude/frontend-testing-specialist.md`) - Frontend testing and validation
+
+## Automatic Agent Assignment Rules
+
+### Backend Development Tasks
+**Trigger**: Rust canister code, backend environment issues, ckTestBTC integration
+**Invoke**: Rust Backend Specialist + IC/DFX Specialist
+```
+Examples:
+- Modifying src/backend/src/lib.rs
+- Environment variable configuration issues
+- Canister deployment problems
+- ckTestBTC API integration
+```
+
+### Frontend Development Tasks
+**Trigger**: React components, TypeScript interfaces, UI improvements
+**Invoke**: React Frontend Specialist + Styling & Component Design Specialist
+```
+Examples:
+- Creating/modifying React components
+- ShadCN component integration or wrapper creation
+- Custom hook development
+- Component architecture improvements
+```
+
+### Infrastructure & Deployment Tasks
+**Trigger**: DFX configuration, canister management, build issues
+**Invoke**: IC/DFX Specialist
+```
+Examples:
+- dfx.json modifications
+- Build script issues
+- Canister deployment failures
+- Environment configuration problems
+```
+
+### DevOps & Automation Tasks
+**Trigger**: Shell scripts, build automation, deployment workflows, environment management
+**Invoke**: DevOps & Shell Scripting Specialist
+```
+Examples:
+- Modifying scripts/ directory files
+- Build process optimization
+- Deployment automation improvements
+- Environment synchronization issues
+- Cross-platform compatibility fixes
+- DFX toolchain workarounds
+- CI/CD pipeline development
+```
+
+### Testing Tasks
+**Trigger**: Test creation, quality assurance, validation
+**Invoke**: Appropriate Testing Specialist (Rust or Frontend)
+```
+Examples:
+- Writing unit tests
+- Integration testing
+- Performance validation
+- Quality gate implementation
+```
+
+### Cross-Cutting/Complex Tasks
+**Trigger**: Multi-domain features, architecture changes, major bug fixes
+**Invoke**: Multiple Specialists in Parallel
+```
+Examples:
+- Full-stack feature implementation
+- Architecture refactoring
+- Multi-component bug fixes
+- Performance optimization across layers
+```
+
+## Feature Management Integration
+
+**CRITICAL**: The Feature Management Specialist must be invoked for ALL substantial work to maintain FEATURES.md accuracy.
+
+### Always Invoke Feature Management Specialist For:
+- **Task Completion Documentation** - Update FEATURES.md with completed work
+- **New Feature Requests** - Create structured feature tracking entries
+- **Progress Tracking** - Monitor implementation status across specialists
+- **Requirements Validation** - Ensure work meets acceptance criteria
+- **Milestone Reporting** - Track progress against project goals
+
+### When NOT to Invoke Feature Management Specialist:
+- Trivial fixes (typos, minor formatting)
+- Read-only analysis tasks
+- Simple troubleshooting queries
+
+## Agent Invocation Workflow
+
+### 1. Task Analysis Phase
+When receiving a user request:
+```markdown
+1. **Classify Task Type**: Determine primary domain (backend, frontend, infrastructure, etc.)
+2. **Identify Complexity**: Single-domain vs cross-cutting task
+3. **Determine Specialists**: Map task requirements to appropriate agents
+4. **Plan Coordination**: Identify dependencies and sequencing needs
+```
+
+### 2. Specialist Invocation Phase
+```markdown
+1. **Use Task Tool**: Invoke appropriate specialists with detailed context
+2. **Parallel Execution**: Run independent specialists simultaneously when possible
+3. **Sequential Coordination**: Handle dependencies between specialists appropriately
+4. **Progress Monitoring**: Track specialist completion and integration needs
+```
+
+### 3. Integration & Documentation Phase
+```markdown
+1. **Feature Management Specialist**: Always invoke for substantial work completion
+2. **FEATURES.md Updates**: Ensure all significant work is documented
+3. **Quality Validation**: Verify work meets acceptance criteria
+4. **User Reporting**: Provide comprehensive completion summary
+```
+
+## Agent Coordination Patterns
+
+### Simple Task Pattern
+```
+User Request → Task Analysis → Single Specialist → Feature Management → User Response
+```
+
+### Complex Task Pattern
+```
+User Request → Task Analysis → Multiple Specialists (Parallel) → Integration → Feature Management → User Response
+```
+
+### Full-Stack Feature Pattern
+```
+User Request → Feature Management (Planning) → Backend Specialists + Frontend Specialists (Parallel) → Testing Specialists → Feature Management (Validation) → User Response
+```
+
+## Quality Gates & Anti-Monolith Principles
+
+All specialists must enforce modular, reusable development:
+
+### Code Quality Standards
+- **Component Size Limits**: Functions <50 lines, Components <100 lines
+- **Single Responsibility**: Each component/function serves ONE purpose
+- **Reuse Validation**: Check existing codebase before creating new components
+- **Composition Verification**: Complex features built from simple, reusable parts
+- **Functional Patterns**: No classes in frontend code, functional composition throughout
+
+### Documentation Quality Standards
+- **Clear Descriptions**: Each feature has unambiguous scope and purpose
+- **Acceptance Criteria**: Specific, measurable completion requirements
+- **Technical Context**: Integration points with existing architecture
+- **Implementation Notes**: Technical decisions and architectural choices documented
+
+## Example Agent Invocations
+
+### Console Error Fix (Recent Example)
+```
+Task: Fix React forwardRef warnings and backend environment errors
+Specialists Invoked:
+1. React Frontend Specialist (ForwardRefButton wrapper creation)
+2. Styling & Component Design Specialist (ShadCN component guidelines)
+3. IC/DFX Specialist (backend environment variable deployment)
+4. Feature Management Specialist (FEATURES.md documentation)
+```
+
+### New Feature Development
+```
+Task: Implement transaction history feature
+Specialists Invoked:
+1. Feature Management Specialist (requirements analysis, FEATURES.md entry)
+2. Rust Backend Specialist (transaction storage and retrieval)
+3. React Frontend Specialist (history display components)
+4. Styling & Component Design Specialist (history UI design)
+5. Testing Specialists (validation and quality assurance)
+6. Feature Management Specialist (completion validation and documentation)
+```
+
+### DevOps Automation Task
+```
+Task: Optimize build process and add deployment validation
+Specialists Invoked:
+1. DevOps & Shell Scripting Specialist (script optimization and validation logic)
+2. IC/DFX Specialist (canister deployment coordination)
+3. Feature Management Specialist (automation improvements documentation)
+```
+
+## Specialist Communication Protocol
+
+### Task Handoff Requirements
+- **Comprehensive Context**: Each specialist receives full task background
+- **Clear Deliverables**: Specific output expectations and quality criteria
+- **Dependency Mapping**: Prerequisites and integration requirements
+- **Success Criteria**: Measurable completion indicators
+
+### Status Reporting Requirements
+- **Progress Updates**: Regular updates on task advancement
+- **Blocker Escalation**: Immediate notification of blocking issues
+- **Quality Metrics**: Test coverage, performance metrics, etc.
+- **Completion Confirmation**: Clear notification when deliverables are ready
+
+## Success Metrics
+
+### Development Efficiency
+- **Faster Feature Delivery**: Specialist expertise reduces implementation time
+- **Higher Quality**: Domain experts ensure best practices and patterns
+- **Better Architecture**: Modular, reusable components through specialist focus
+- **Comprehensive Documentation**: Feature Management ensures complete tracking
+
+### Code Quality Through Modularity
+- **Component Reuse**: Measure percentage of new features built from existing components
+- **Pattern Consistency**: Validate consistent use of established architectural patterns
+- **Test Coverage**: Backend >80%, Frontend >85% coverage targets for all modules
+- **Documentation Accuracy**: FEATURES.md reflects actual project state
+
+This specialized agent system ensures expert handling of all development domains while maintaining comprehensive project documentation and modular, reusable architecture.

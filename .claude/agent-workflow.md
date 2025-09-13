@@ -47,7 +47,14 @@ This document defines the specialized agent ecosystem for the ic-ckTestBTC proje
 - Style utility composition and component library development
 - Performance optimization through style reuse and modular design
 
-### 7. Feature Management Specialist (`feature-management-specialist.md`)
+### 7. DevOps & Shell Scripting Specialist (`devops-shell-specialist.md`)
+**Primary Role**: Build automation, deployment scripts, and development workflow optimization
+- **Shell Script Development**: Advanced bash scripting with robust error handling and cross-platform compatibility
+- **Build Automation**: CI/CD pipeline scripts, deployment automation, and build process optimization
+- **Environment Management**: Dynamic environment variable synchronization and configuration management
+- **DFX Integration**: Internet Computer deployment scripts and canister lifecycle management
+
+### 8. Feature Management Specialist (`feature-management-specialist.md`)
 **Primary Role**: Feature tracking and comprehensive project progress management
 - **FEATURES.md Management**: Maintain comprehensive feature tracking system
 - **Requirements Analysis**: Break down user requests into actionable development tasks
@@ -70,6 +77,7 @@ graph TD
     D -->|Frontend Logic| RF[React Frontend Specialist]
     D -->|Frontend Testing| FT[Frontend Testing Specialist]
     D -->|Styling/Design| ST[Styling Specialist]
+    D -->|DevOps/Scripts| DO[DevOps Shell Specialist]
     D -->|Multi-domain| PA[Parallel Agent Execution]
     IC --> FM
     RB --> FM
@@ -77,6 +85,7 @@ graph TD
     RF --> FM
     FT --> FM
     ST --> FM
+    DO --> FM
     PA --> FM
 ```
 

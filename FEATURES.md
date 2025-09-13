@@ -174,6 +174,14 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ WASM file verification and size reporting
   - ✅ Comprehensive build status reporting with colored output
 
+- ✅ **Environment Variable Persistence:** Robust variable management across DFX restarts
+  - ✅ **Persistent Storage in dfx.json:** Environment variables stored in dfx.json env section
+  - ✅ **Enhanced npm Script Workflow:** Proper sequencing (dfx:create → update:env → dfx:deploy)
+  - ✅ **Runtime Environment Loading:** Scripts load variables from dfx.json using jq with fallbacks
+  - ✅ **Mock Canister WASM Deployment:** Automatic deployment of WASM modules for mock canisters
+  - ✅ **Complete Workflow Robustness:** Clean DFX restart (dfx stop, dfx start --clean, npm run dev) works reliably
+  - ✅ **Developer Experience:** No manual environment variable intervention required after restarts
+
 - ✅ **Production Readiness:** Deployment-ready configuration
   - ✅ Optimized production builds
   - ✅ Environment-specific configurations
@@ -293,6 +301,14 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ TypeScript integration with IC types
   - ✅ Environment variable management across build stages
   - ✅ Asset canister integration with development server
+
+- ✅ **Environment Variable Persistence Issue:** Critical development workflow stability problem
+  - ✅ **Problem Solved:** Backend canister environment variables (LOCAL_MOCK_LEDGER_CANISTER_ID) not persisting after DFX restarts
+  - ✅ **Root Cause Analysis:** Rust option_env!() reads compile-time variables, shell sessions don't persist across builds
+  - ✅ **Solution:** Persistent storage in dfx.json with enhanced script workflow and mock canister WASM deployment
+  - ✅ **Impact:** Developers can now restart entire stack without manual environment variable intervention
+  - ✅ **Files Enhanced:** update-env.sh, build-backend.sh, deploy-backend.sh, setup-canisters.sh
+  - ✅ **Testing:** Complete workflow verified with clean DFX restart and successful variable persistence
 
 - ✅ **Browser Extension Error Resolution:** Complex browser extension conflict resolution
   - ✅ Resolved inject.js async response errors from browser extensions
