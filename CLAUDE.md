@@ -275,3 +275,38 @@ candid-extractor target/wasm32-unknown-unknown/release/backend.wasm
 - Current project dfx version: 0.29.1
 - candid-extractor works correctly and shows complete interface
 - Issue persists across dfx versions 0.28.0 → 0.29.1
+
+## Frontend File Organization Standards
+
+### Directory Naming Convention
+
+**IMPORTANT**: All utility modules must follow the directory-per-module pattern:
+
+- ✅ **Correct**: `src/lib/utils/error-filters/index.ts`
+- ✅ **Correct**: `src/lib/utils/styles/index.ts`
+- ❌ **Incorrect**: `src/lib/utils/error-filter.ts`
+- ❌ **Incorrect**: `src/lib/utils/styles.ts`
+
+**Rules**:
+1. Each utility module gets its own directory under `src/lib/utils/`
+2. The main export file is always named `index.ts`
+3. Use plural directory names (e.g., `error-filters`, `styles`, `validators`)
+4. Export from directories, not files directly
+
+**Benefits**:
+- **Scalability**: Easy to add related utilities to the same module
+- **Consistency**: Uniform import patterns across the application
+- **Organization**: Clear separation of concerns
+- **Extensibility**: Room for growth without refactoring
+
+**Import Examples**:
+```typescript
+// ✅ Good - imports from directory
+import { setupErrorFiltering } from '@/lib/utils/error-filters'
+import { cn } from '@/lib/utils/styles'
+
+// ✅ Also good - using the centralized lib index
+import { setupErrorFiltering, cn } from '@/lib'
+```
+
+This convention applies to all utility modules in the frontend codebase.

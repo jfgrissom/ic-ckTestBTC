@@ -2,7 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(async () => {
+  const tailwindcss = (await import('@tailwindcss/vite')).default;
+
+  return {
   root: 'src/frontend',
   publicDir: 'public',
   envDir: '../../',
@@ -12,6 +15,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    tailwindcss(),
   ],
   define: {
     global: 'globalThis',
@@ -19,6 +23,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src/frontend/src'),
       'declarations': path.resolve(__dirname, 'src/declarations'),
     },
   },
@@ -30,4 +35,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });

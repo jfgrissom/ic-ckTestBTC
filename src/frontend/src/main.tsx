@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { setupErrorFiltering } from './utils/error-filter';
+import { setupErrorFiltering } from '@/lib';
 
 // Setup error filtering for development
 setupErrorFiltering();
