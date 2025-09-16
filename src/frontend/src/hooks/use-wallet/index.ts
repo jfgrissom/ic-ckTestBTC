@@ -89,12 +89,15 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     await loadBalance();
   };
 
-  const handleSend = async (): Promise<void> => {
-    if (!sendAmount || !sendTo) return;
+  const handleSend = async (recipient?: string, amount?: string): Promise<void> => {
+    const finalRecipient = recipient || sendTo;
+    const finalAmount = amount || sendAmount;
+
+    if (!finalRecipient || !finalAmount) return;
 
     setLoading(true);
     try {
-      const result = await transfer(sendTo, sendAmount);
+      const result = await transfer(finalRecipient, finalAmount);
       if (result.success) {
         showError({
           title: 'Transfer Successful',
@@ -102,8 +105,9 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
           details: `Block index: ${result.blockIndex}`,
           severity: 'info'
         });
-        setSendAmount('');
-        setSendTo('');
+        // Only clear state if we were using internal state
+        if (!recipient) setSendAmount('');
+        if (!amount) setSendTo('');
         await loadBalance();
         // Refresh transaction history after successful send
         await refreshTransactions();

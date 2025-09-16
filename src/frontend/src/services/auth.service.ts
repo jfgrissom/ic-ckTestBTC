@@ -65,12 +65,57 @@ export const getAuthClient = (): AuthClient | null => {
 export const getUserPrincipal = async (): Promise<Principal | null> => {
   const backend = getBackend();
   if (!backend) return null;
-  
+
   try {
     const principal = await backend.get_principal();
     return principal;
   } catch (error) {
     console.error('Failed to get user principal:', error);
+
+    // If signature verification failed, try to refresh authentication
+    if (error instanceof Error && error.message.includes('signature')) {
+      console.log('[Auth Service] Signature verification failed, attempting auth refresh...');
+      try {
+        await refreshAuthentication();
+        const refreshedBackend = getBackend();
+        if (refreshedBackend) {
+          return await refreshedBackend.get_principal();
+        }
+      } catch (refreshError) {
+        console.error('[Auth Service] Auth refresh failed:', refreshError);
+      }
+    }
+
     return null;
+  }
+};
+
+/**
+ * Refresh authentication when signature verification fails
+ */
+export const refreshAuthentication = async (): Promise<void> => {
+  if (!authClient) {
+    throw new Error('Auth client not initialized');
+  }
+
+  try {
+    // Force logout and re-login
+    await authClient.logout();
+
+    // Re-initialize auth client
+    const newClient = await AuthClient.create();
+    authClient = newClient;
+
+    // Check if still authenticated after refresh
+    const isAuth = await authClient.isAuthenticated();
+    if (!isAuth) {
+      console.log('[Auth Service] User needs to re-authenticate');
+      throw new Error('User needs to re-authenticate');
+    }
+
+    console.log('[Auth Service] Authentication refreshed successfully');
+  } catch (error) {
+    console.error('[Auth Service] Failed to refresh authentication:', error);
+    throw error;
   }
 };

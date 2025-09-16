@@ -46,11 +46,9 @@ const SendReceiveTab: React.FC<SendReceiveTabProps> = ({
   const [isCopied, setIsCopied] = useState(false);
 
   const formatBalance = (balance: string, token: string) => {
+    // Balance is already formatted by the service layer
     const numBalance = parseFloat(balance);
-    if (token === 'ckTestBTC' || token === 'ICP') {
-      return (numBalance / 100000000).toFixed(8);
-    }
-    return balance;
+    return numBalance.toFixed(8);
   };
 
   const handleCopyPrincipal = async () => {

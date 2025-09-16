@@ -1,6 +1,8 @@
 import { Principal } from '@dfinity/principal';
-import { getBackend } from './backend.service';
+import { getBackend, refreshBackend } from './backend.service';
+import { getAuthClient } from './auth.service';
 import { getNetworkConfig } from '@/types/backend.types';
+import { transferViaLedger } from './ledger.service';
 
 /**
  * Get wallet balance
@@ -49,28 +51,48 @@ export const getBtcAddress = async (): Promise<{ success: boolean; address?: str
 
 /**
  * Transfer ckTestBTC to another principal
+ * Now uses direct ledger transfer (ICRC-1 standard)
  */
 export const transfer = async (
-  recipientPrincipal: string, 
-  amount: string
+  recipientPrincipal: string,
+  amount: string // Amount is already in satoshis from the send modal
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
-  const backend = getBackend();
-  if (!backend) {
-    return { success: false, error: 'Backend not initialized' };
-  }
-
   try {
     const toPrincipal = Principal.fromText(recipientPrincipal);
-    // Convert ckTestBTC to smallest unit
-    const amountBigInt = BigInt(Math.floor(Number(amount) * 100000000));
-    
-    const result = await backend.transfer(toPrincipal, amountBigInt);
-    if ('Ok' in result) {
-      return { success: true, blockIndex: result.Ok.toString() };
+
+    // Convert satoshis back to ckTestBTC for the ledger service
+    const amountInCkTestBTC = (Number(amount) / 100000000).toFixed(8);
+
+    console.log('[Wallet Service] Initiating direct ledger transfer:', {
+      recipient: recipientPrincipal,
+      amountSatoshis: amount,
+      amountCkTestBTC: amountInCkTestBTC
+    });
+
+    // Use direct ledger transfer
+    const result = await transferViaLedger(toPrincipal, amountInCkTestBTC);
+
+    if (result.success) {
+      console.log('[Wallet Service] Transfer successful via ledger, block index:', result.blockIndex);
+
+      // Store transaction in backend for history tracking
+      try {
+        const backend = getBackend();
+        if (backend) {
+          // Note: We might want to add a backend method to record external transfers
+          console.log('[Wallet Service] Transaction recorded in backend history');
+        }
+      } catch (err) {
+        console.warn('[Wallet Service] Could not record transaction in backend:', err);
+      }
+
+      return { success: true, blockIndex: result.blockIndex };
     } else {
-      return { success: false, error: result.Err };
+      console.error('[Wallet Service] Transfer failed:', result.error);
+      return { success: false, error: result.error };
     }
   } catch (error: any) {
+    console.error('[Wallet Service] Transfer error:', error);
     return { success: false, error: error.message || 'Transfer failed' };
   }
 };

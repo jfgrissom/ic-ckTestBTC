@@ -15,18 +15,34 @@ export const useAuth = (): AuthState & AuthActions => {
   // Handle when backend becomes available after initialization
   useEffect(() => {
     if (backend && authClient && !isAuthenticated) {
-      completeAuthentication();
+      // Only complete authentication if the user is actually authenticated
+      authClient.isAuthenticated().then(authenticated => {
+        if (authenticated) {
+          completeAuthentication();
+        }
+      });
     }
   }, [backend, authClient, isAuthenticated]);
 
   const completeAuthentication = async (): Promise<void> => {
-    if (!backend) return;
+    if (!backend || !authClient) {
+      console.log('[Auth] Backend or auth client not ready for completion');
+      return;
+    }
 
     try {
+      // Double check authentication status before making backend calls
+      const isAuth = await authClient.isAuthenticated();
+      if (!isAuth) {
+        console.log('[Auth] User not authenticated, skipping completion');
+        return;
+      }
+
+      console.log('[Auth] Completing authentication with backend');
       const userPrincipal = await backend.get_principal();
       setPrincipal(userPrincipal.toString());
-
       setIsAuthenticated(true);
+      console.log('[Auth] Authentication completed successfully');
     } catch (error) {
       console.error('Failed to complete authentication:', error);
       setIsAuthenticated(false);
@@ -40,8 +56,12 @@ export const useAuth = (): AuthState & AuthActions => {
       const client = await initAuth();
       setAuthClient(client);
 
-      if (await client.isAuthenticated()) {
+      const isAuth = await client.isAuthenticated();
+      if (isAuth) {
+        console.log('[Auth] User already authenticated, completing authentication flow');
         await handleAuthenticated(client);
+      } else {
+        console.log('[Auth] User not authenticated, waiting for login');
       }
     } catch (error) {
       console.error('Failed to initialize auth:', error);

@@ -23,7 +23,6 @@ service : {
   get_principal : () -> (principal) query;
   get_transaction : (nat64) -> (opt Transaction) query;
   get_transaction_history : () -> (vec Transaction) query;
-  transfer : (principal, nat) -> (Result);
   transfer_icp : (principal, nat) -> (Result);
   withdraw_testbtc : (text, nat) -> (TextResult);
 }

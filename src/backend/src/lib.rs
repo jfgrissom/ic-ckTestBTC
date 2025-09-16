@@ -187,68 +187,30 @@ async fn get_balance() -> Result<Nat, String> {
         subaccount: None,
     };
 
+    ic_cdk::println!("[GET_BALANCE] Called by principal: {}", caller());
+    ic_cdk::println!("[GET_BALANCE] Account: {:?}", account);
+
     let token_canister = get_token_canister()?;
+    ic_cdk::println!("[GET_BALANCE] Token canister: {}", token_canister);
 
     let result: CallResult<(Nat,)> = ic_cdk::call(token_canister, "icrc1_balance_of", (account,)).await;
 
     match result {
-        Ok((balance,)) => Ok(balance),
-        Err(e) => Err(format!("Failed to get balance: {e:?}")),
+        Ok((balance,)) => {
+            ic_cdk::println!("[GET_BALANCE] Balance returned: {}", balance);
+            Ok(balance)
+        },
+        Err(e) => {
+            ic_cdk::println!("[GET_BALANCE] Error: {e:?}");
+            Err(format!("Failed to get balance: {e:?}"))
+        },
     }
 }
 
-#[update]
-async fn transfer(to_principal: Principal, amount: Nat) -> Result<Nat, String> {
-    let from_principal = caller();
-    let to_account = Account {
-        owner: to_principal,
-        subaccount: None,
-    };
-
-    let transfer_args = TransferArgs {
-        from_subaccount: None,
-        to: to_account,
-        amount: amount.clone(),
-        fee: None,
-        memo: None,
-        created_at_time: Some(ic_cdk::api::time()),
-    };
-
-    let token_canister = get_token_canister()?;
-
-    let result: CallResult<(TransferResult,)> =
-        ic_cdk::call(token_canister, "icrc1_transfer", (transfer_args,)).await;
-
-    match result {
-        Ok((Ok(block_index),)) => {
-            // Store transaction in history
-            store_transaction(
-                TransactionType::Send,
-                "ckTestBTC".to_string(),
-                amount,
-                from_principal.to_text(),
-                to_principal.to_text(),
-                TransactionStatus::Confirmed,
-                Some(block_index.clone()),
-            );
-            Ok(block_index)
-        },
-        Ok((Err(transfer_error),)) => {
-            // Store failed transaction
-            store_transaction(
-                TransactionType::Send,
-                "ckTestBTC".to_string(),
-                amount,
-                from_principal.to_text(),
-                to_principal.to_text(),
-                TransactionStatus::Failed,
-                None,
-            );
-            Err(format!("Transfer failed: {transfer_error:?}"))
-        },
-        Err(e) => Err(format!("Call failed: {e:?}")),
-    }
-}
+// Note: The transfer function has been removed.
+// The frontend now calls the ckTestBTC ledger directly for transfers
+// to maintain compatibility with the IC mainnet implementation.
+// The backend only handles wallet-specific features like transaction history.
 
 #[query]
 fn get_principal() -> Principal {
@@ -489,7 +451,7 @@ async fn transfer_icp(to_principal: Principal, amount: Nat) -> Result<Nat, Strin
         from_subaccount: None,
         to: to_account,
         amount: amount.clone(),
-        fee: None,
+        fee: Some(Nat::from(10000u64)), // ICP fee is typically 10000 e8s (0.0001 ICP)
         memo: None,
         created_at_time: Some(ic_cdk::api::time()),
     };

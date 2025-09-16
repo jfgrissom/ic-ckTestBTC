@@ -12,14 +12,26 @@ let backendActor: BackendActor | null = null;
 export const initializeBackend = async (client: AuthClient): Promise<BackendActor> => {
   const identity = client.getIdentity();
   const config = getNetworkConfig();
-  
+
   const agent = new HttpAgent({
     identity,
     host: config.host,
+    // For local development, we may need to disable verification
+    ...(config.network === 'local' && {
+      verifyQuerySignatures: false,
+    }),
   });
 
+  // For local development, always fetch root key and configure properly
   if (config.network === 'local') {
-    await agent.fetchRootKey();
+    try {
+      await agent.fetchRootKey();
+      console.log('[Backend Service] Root key fetched successfully for local development');
+    } catch (error) {
+      console.error('[Backend Service] Failed to fetch root key:', error);
+      // In local development, we might need to proceed without root key verification
+      console.warn('[Backend Service] Proceeding without root key verification for local development');
+    }
   }
 
   const actor = Actor.createActor(idlFactory, {
@@ -28,7 +40,16 @@ export const initializeBackend = async (client: AuthClient): Promise<BackendActo
   }) as BackendActor;
 
   backendActor = actor;
+  console.log('[Backend Service] Backend actor initialized with canister ID:', config.canisterId);
   return actor;
+};
+
+/**
+ * Refresh backend actor with current authentication
+ */
+export const refreshBackend = async (client: AuthClient): Promise<BackendActor> => {
+  // Force re-initialization with fresh identity
+  return await initializeBackend(client);
 };
 
 /**
