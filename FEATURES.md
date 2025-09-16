@@ -42,15 +42,24 @@ application.
   - ✅ Balance display in human-readable format (8 decimal places)
   - ✅ Balance refresh functionality
 
-- ✅ **Transaction Management:** Send and receive ckTestBTC
+- ✅ **Transaction Management:** Send and receive ckTestBTC with direct ledger integration
 
-  - ✅ Send ckTestBTC to other principals (mock functionality in local
-    development)
-  - ✅ Amount validation and conversion (human units to satoshi-like units)
+  - ✅ **Direct Ledger Transfer Implementation:** Frontend-to-ledger communication bypassing backend proxy
+    - ✅ Created `ledger.service.ts` for direct ICRC-1 standard interactions
+    - ✅ Proper Candid optional field encoding with array-based format (`[] | [T]`)
+    - ✅ Fixed authentication initialization race conditions preventing transfer errors
+    - ✅ Maintains IC mainnet compatibility while enabling local development
+    - ✅ Direct `icrc1_transfer` calls with proper fee handling (10 satoshi)
+    - ✅ Real-time transfer confirmation with block index reporting
+  - ✅ Send ckTestBTC to other principals with live blockchain transactions
+  - ✅ Amount validation and conversion (human units to satoshi precision)
   - ✅ Transaction result handling with success/error feedback
-  - ✅ Principal ID validation for recipients
-  - ✅ User-friendly transaction feedback
-  - ✅ Mock transaction simulation for local testing
+  - ✅ Principal ID validation for recipients using @dfinity/principal
+  - ✅ User-friendly transaction feedback with detailed error messages
+  - ✅ **Candid Encoding Resolution:** Fixed "Invalid opt vec nat8 argument" errors
+    - ✅ Corrected optional field handling from `null/undefined` to proper array format
+    - ✅ Implemented proper ICRC-1 `TransferArgs` structure with IC-compatible encoding
+    - ✅ Resolved signature verification errors through proper authentication flow
 
 - ✅ **Transaction History & Recording:** Complete transaction tracking system
 
@@ -491,6 +500,24 @@ application.
   - ✅ **Impact:** Clean development console without performance-affecting debug
     noise
   - ✅ **Benefit:** Improved developer experience and production performance
+
+- ✅ **Direct Ledger Integration Architecture:** Frontend-to-ledger communication implementation
+  - ✅ **Problem Solved:** Backend proxy pattern causing InsufficientFunds errors due to caller principal mismatch
+    - ✅ Root cause: Mock ledger using backend canister principal (0 balance) instead of user principal (200M satoshis)
+    - ✅ User feedback: Maintain IC mainnet compatibility instead of modifying mock ledger
+  - ✅ **Solution Implementation:** Complete refactor to direct ICRC-1 standard integration
+    - ✅ Created `ledger.service.ts` for frontend-to-ledger communication
+    - ✅ Removed `transfer` function from backend to maintain IC standard compliance
+    - ✅ Updated `wallet.service.ts` to use direct ledger calls instead of backend proxy
+    - ✅ Proper Candid encoding for ICRC-1 `TransferArgs` with array-based optional fields
+  - ✅ **Technical Achievements:**
+    - ✅ Fixed Candid optional field encoding: `null/undefined` → `[] | [T]` format
+    - ✅ Resolved authentication initialization race conditions preventing signature verification errors
+    - ✅ Implemented proper fee handling (10 satoshi) with array format `[BigInt(10)]`
+    - ✅ Created dynamic canister ID resolution for local vs mainnet environments
+    - ✅ Maintained full IC mainnet compatibility while enabling local development
+  - ✅ **Impact:** Live ckTestBTC transfers working with proper block index confirmation
+  - ✅ **Architecture Benefit:** Direct standard compliance eliminates proxy-related authentication issues
 
 ### Architecture Decisions
 
