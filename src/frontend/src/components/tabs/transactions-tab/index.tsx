@@ -36,7 +36,7 @@ interface TransactionsTabProps {
   onRefreshTransactions: () => void;
 }
 
-type TransactionType = 'All' | 'Send' | 'Receive' | 'Deposit' | 'Withdraw';
+type TransactionType = 'All' | 'Send' | 'Receive' | 'Deposit' | 'Withdraw' | 'Mint';
 type TokenFilter = 'All' | 'ICP' | 'ckTestBTC';
 type StatusFilter = 'All' | 'Pending' | 'Confirmed' | 'Failed';
 
@@ -109,6 +109,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
     const receives = transactions.filter(tx => tx.tx_type === 'Receive').length;
     const deposits = transactions.filter(tx => tx.tx_type === 'Deposit').length;
     const withdrawals = transactions.filter(tx => tx.tx_type === 'Withdraw').length;
+    const mints = transactions.filter(tx => tx.tx_type === 'Mint').length;
 
     return {
       total,
@@ -119,6 +120,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
       receives,
       deposits,
       withdrawals,
+      mints,
     };
   }, [transactions]);
 
@@ -153,6 +155,8 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
         return <ArrowUpDown className="h-4 w-4 text-blue-600" />;
       case 'Withdraw':
         return <ArrowUpDown className="h-4 w-4 text-purple-600" />;
+      case 'Mint':
+        return <TrendingDown className="h-4 w-4 text-emerald-600" />;
       default:
         return <History className="h-4 w-4 text-gray-600" />;
     }
@@ -241,6 +245,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
                   <SelectItem value="Receive">Receive</SelectItem>
                   <SelectItem value="Deposit">Deposit</SelectItem>
                   <SelectItem value="Withdraw">Withdraw</SelectItem>
+                  <SelectItem value="Mint">Mint</SelectItem>
                 </SelectContent>
               </Select>
             </div>

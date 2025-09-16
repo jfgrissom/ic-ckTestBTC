@@ -24,6 +24,7 @@ pub enum TransactionType {
     Receive,
     Deposit,
     Withdraw,
+    Mint,
 }
 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
@@ -280,7 +281,20 @@ async fn faucet() -> TextResult {
         ic_cdk::call(token_canister, "mint", (account, amount.clone())).await;
     
     match result {
-        Ok((Ok(_block_index),)) => TextResult::Ok(format!("Successfully minted 1 ckTestBTC to {}", caller_principal)),
+        Ok((Ok(block_index),)) => {
+            // Record the mint transaction
+            let _tx_id = store_transaction(
+                TransactionType::Mint,
+                "ckTestBTC".to_string(),
+                amount.clone(),
+                "faucet".to_string(), // From faucet
+                caller_principal.to_string(), // To caller
+                TransactionStatus::Confirmed,
+                Some(block_index.clone()),
+            );
+
+            TextResult::Ok(format!("Successfully minted 1 ckTestBTC to {}", caller_principal))
+        },
         Ok((Err(e),)) => TextResult::Err(format!("Mint failed: {:?}", e)),
         Err(e) => TextResult::Err(format!("Call failed: {:?}", e)),
     }

@@ -5,7 +5,7 @@ import { cn } from '@/lib';
 
 export interface Transaction {
   id: number;
-  tx_type: 'Send' | 'Receive' | 'Deposit' | 'Withdraw';
+  tx_type: 'Send' | 'Receive' | 'Deposit' | 'Withdraw' | 'Mint';
   token: string;
   amount: string;
   from: string;
@@ -70,13 +70,15 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'Withdraw':
         return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Mint':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const isOutgoing = transaction.tx_type === 'Send' || transaction.tx_type === 'Withdraw';
-  const isIncoming = transaction.tx_type === 'Receive' || transaction.tx_type === 'Deposit';
+  const isIncoming = transaction.tx_type === 'Receive' || transaction.tx_type === 'Deposit' || transaction.tx_type === 'Mint';
 
   return (
     <Card className={cn("w-full", className)}>
@@ -112,6 +114,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
                 )}
                 {transaction.tx_type === 'Withdraw' && (
                   <>To TestBTC: {formatAddress(transaction.to)}</>
+                )}
+                {transaction.tx_type === 'Mint' && (
+                  <>New Tokens Minted</>
                 )}
               </div>
               <div className="text-xs text-gray-400">

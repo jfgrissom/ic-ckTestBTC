@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { icpService, getICPBalance, transferICP, formatICPBalance, parseICPAmount } from '@/services/icp.service';
-import { useBackend } from '@/hooks/useBackend';
+import { useBackend } from '@/hooks/use-backend';
 
 interface UseICPReturn {
   balance: string;

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getBalance, getBtcAddress, transfer, useFaucet } from '@/services/wallet.service';
 import { WalletState, WalletActions, TransactionState, TransactionActions } from '@/types/wallet.types';
-import { useTransactionHistory } from '@/hooks/useTransactionHistory';
-import { useICP } from '@/hooks/useICP';
-import { useBackend } from '@/hooks/useBackend';
+import { useTransactionHistory } from '@/hooks/use-transaction-history';
+import { useICP } from '@/hooks/use-icp';
+import { useBackend } from '@/hooks/use-backend';
 import { useError } from '@/contexts/error-context';
 
 interface UseWalletReturn extends WalletState, WalletActions, TransactionState, TransactionActions {

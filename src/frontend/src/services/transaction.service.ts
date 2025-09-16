@@ -1,4 +1,5 @@
 import { BackendActor } from '@/types/backend.types';
+import { Transaction as BackendTransaction, TransactionType, TransactionStatus } from '@/declarations/backend/backend.did';
 
 // Import and re-export Transaction type from shared component for consistency
 import { Transaction } from '@/components/shared/transaction-item';
@@ -16,19 +17,6 @@ interface TransactionResult {
   error?: string;
 }
 
-// Define the backend transaction type to match our Rust backend
-interface BackendTransaction {
-  id: number;
-  tx_type: { Send?: null; Receive?: null; Deposit?: null; Withdraw?: null };
-  token: string;
-  amount: bigint;
-  from: string;
-  to: string;
-  status: { Pending?: null; Confirmed?: null; Failed?: null };
-  timestamp: bigint;
-  block_index?: bigint;
-}
-
 class TransactionService {
   private backendActor: BackendActor | null = null;
 
@@ -37,24 +25,23 @@ class TransactionService {
   }
 
   async getTransactionHistory(): Promise<TransactionServiceResult> {
-    if (!this.backendActor) {
+    // Use the global backend service instead of the stored actor
+    const backendActor = (await import('@/services/backend.service')).getBackend();
+    console.log('TransactionService: Backend actor from global service:', !!backendActor);
+
+    if (!backendActor) {
+      console.log('TransactionService: No backend actor available');
       return { success: false, error: 'Backend not initialized' };
     }
 
     try {
-      // Check if the method exists in the backend
-      if (!('get_transaction_history' in this.backendActor)) {
-        console.warn('get_transaction_history method not implemented in backend');
-        return {
-          success: true,
-          data: [], // Return empty array for now
-        };
-      }
-
-      const result = await (this.backendActor as any).get_transaction_history();
+      console.log('TransactionService: Calling get_transaction_history...');
+      const result = await (backendActor as any).get_transaction_history();
+      console.log('TransactionService: Raw backend result:', result);
 
       // Transform backend transactions to frontend format
-      const transactions = result.map(this.transformBackendTransaction);
+      const transactions = result.map(this.transformBackendTransaction.bind(this));
+      console.log('TransactionService: Transformed transactions:', transactions);
 
       return {
         success: true,
@@ -70,13 +57,16 @@ class TransactionService {
   }
 
   async getTransaction(id: number): Promise<TransactionResult> {
-    if (!this.backendActor) {
+    // Use the global backend service instead of the stored actor
+    const backendActor = (await import('@/services/backend.service')).getBackend();
+
+    if (!backendActor) {
       return { success: false, error: 'Backend not initialized' };
     }
 
     try {
       // Check if the method exists in the backend
-      if (!('get_transaction' in this.backendActor)) {
+      if (!('get_transaction' in backendActor)) {
         console.warn('get_transaction method not implemented in backend');
         return {
           success: false,
@@ -84,7 +74,7 @@ class TransactionService {
         };
       }
 
-      const result = await (this.backendActor as any).get_transaction(BigInt(id));
+      const result = await (backendActor as any).get_transaction(BigInt(id));
 
       if (result.length > 0) {
         const transaction = this.transformBackendTransaction(result[0]);
@@ -109,11 +99,12 @@ class TransactionService {
 
   private transformBackendTransaction(backendTx: BackendTransaction): Transaction {
     // Transform transaction type
-    let txType: 'Send' | 'Receive' | 'Deposit' | 'Withdraw';
+    let txType: 'Send' | 'Receive' | 'Deposit' | 'Withdraw' | 'Mint';
     if ('Send' in backendTx.tx_type) txType = 'Send';
     else if ('Receive' in backendTx.tx_type) txType = 'Receive';
     else if ('Deposit' in backendTx.tx_type) txType = 'Deposit';
-    else txType = 'Withdraw';
+    else if ('Withdraw' in backendTx.tx_type) txType = 'Withdraw';
+    else txType = 'Mint';
 
     // Transform status
     let status: 'Pending' | 'Confirmed' | 'Failed';
@@ -122,7 +113,7 @@ class TransactionService {
     else status = 'Failed';
 
     return {
-      id: backendTx.id,
+      id: Number(backendTx.id),
       tx_type: txType,
       token: backendTx.token,
       amount: backendTx.amount.toString(),
@@ -130,7 +121,7 @@ class TransactionService {
       to: backendTx.to,
       status: status,
       timestamp: Number(backendTx.timestamp),
-      block_index: backendTx.block_index?.toString(),
+      block_index: backendTx.block_index.length > 0 ? backendTx.block_index[0].toString() : undefined,
     };
   }
 

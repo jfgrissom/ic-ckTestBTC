@@ -47,6 +47,19 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ User-friendly transaction feedback
   - ✅ Mock transaction simulation for local testing
 
+- ✅ **Transaction History & Recording:** Complete transaction tracking system
+  - ✅ **Mint Transaction Support:** Records token mint operations from faucet
+    - ✅ Backend: Added `Mint` to `TransactionType` enum with proper Candid export
+    - ✅ Backend: Updated faucet function to record mint transactions with block indices
+    - ✅ Frontend: Emerald-colored mint transaction badges with "New Tokens Minted" display
+    - ✅ Frontend: Mint transaction filter option in transaction history
+  - ✅ **Transaction Storage:** Backend stores all transactions in thread-local storage
+  - ✅ **Transaction Retrieval:** Frontend service retrieves and displays transaction history
+  - ✅ **Transaction Statistics:** Real-time counts for confirmed/pending/failed/mint transactions
+  - ✅ **Transaction Filtering:** Filter by type (Send/Receive/Deposit/Withdraw/Mint), token, status
+  - ✅ **Transaction Search:** Search by address, transaction ID, or block index
+  - ✅ **Transaction Pagination:** Paginated view with configurable items per page
+
 - ✅ **Wallet Display:** User-friendly wallet interface
   - ✅ Principal ID display with truncation for readability
   - ✅ Copy-to-clipboard functionality for receiving address
@@ -336,20 +349,34 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ## Current Limitations
 
 - 🤔 **Mainnet Deployment:** Ready for mainnet but currently configured for local development
-- 🤔 **Transaction History:** No persistent transaction history
+- ✅ **Transaction History:** Complete persistent transaction history implemented
 - 🤔 **Multi-Asset Support:** Only ckTestBTC currently supported
 - 🤔 **Mobile Optimization:** Desktop-first design
 - 🤔 **Local Development Constraints:** Mock data only, no real blockchain interactions in local mode
 - ✅ **DFX Toolchain Limitations:** Resolved through comprehensive workarounds
-  - ✅ DFX Candid generation bug bypassed with `candid-extractor` and manual TypeScript bindings
-  - ✅ All backend functions (`faucet`, `get_btc_address`, `get_balance`, `transfer`, `get_principal`) accessible in frontend
+  - ✅ **DFX 0.29.1 Declaration Generation:** Proper protocol implementation
+    - ✅ Replaced manual hardcoded TypeScript interfaces with scalable auto-extraction
+    - ✅ Updated script to use `candid-extractor` + `dfx generate` workflow
+    - ✅ Complete TypeScript declarations with all backend functions properly exported
+    - ✅ Auto-scales as new functions are added without script updates
+  - ✅ All backend functions accessible in frontend with proper type safety
   - ✅ Reliable build process independent of DFX version bugs
+
+- ✅ **Frontend Architecture Compliance:** Functional-only codebase alignment
+  - ✅ **Hook Directory Structure:** Refactored to follow project standards
+    - ✅ All hooks moved from direct `.ts` files to directory-per-module structure
+    - ✅ Kebab-case naming convention: `use-auth/index.ts`, `use-wallet/index.ts`, etc.
+    - ✅ Updated all imports throughout codebase to use new directory structure
+  - ✅ **Service Layer Architecture:** Maintained class-based services for state management
+    - ✅ Services provide singleton pattern for backend actor management
+    - ✅ Clear separation between functional React components and stateful services
+    - ✅ Type-safe integration with auto-generated backend declarations
 
 ## Future Considerations
 
 ### Enhanced Features
 
-- 🤔 **Transaction History:** Persistent transaction logging and display
+- ✅ **Transaction History:** Persistent transaction logging and display (COMPLETED)
 - 🤔 **QR Code Support:** QR code generation for receiving addresses
 - 🤔 **Address Book:** Save frequently used recipient addresses
 - 🤔 **Multi-Asset Wallet:** Support for additional cryptocurrencies

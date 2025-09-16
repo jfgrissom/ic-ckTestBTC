@@ -1,26 +1,29 @@
-type Account = record {
-  owner : principal;
-  subaccount : opt blob;
+type Result = variant { Ok : nat; Err : text };
+type TextResult = variant { Ok : text; Err : text };
+type Transaction = record {
+  id : nat64;
+  to : text;
+  status : TransactionStatus;
+  token : text;
+  block_index : opt nat;
+  from : text;
+  timestamp : nat64;
+  tx_type : TransactionType;
+  amount : nat;
 };
-
-type TransferError = variant {
-  BadFee : record { expected_fee : nat };
-  BadBurn : record { min_burn_amount : nat };
-  InsufficientFunds : record { balance : nat };
-  TooOld;
-  CreatedInFuture : record { ledger_time : nat64 };
-  Duplicate : record { duplicate_of : nat };
-  TemporarilyUnavailable;
-  GenericError : record { error_code : nat; message : text };
-};
-
-type Result = variant {
-  Ok : nat;
-  Err : text;
-};
-
+type TransactionStatus = variant { Failed; Confirmed; Pending };
+type TransactionType = variant { Withdraw; Mint; Deposit; Send; Receive };
 service : {
-  "get_balance": () -> (Result);
-  "transfer": (principal, nat) -> (Result);
-  "get_principal": () -> (principal) query;
+  faucet : () -> (TextResult);
+  get_balance : () -> (Result);
+  get_btc_address : () -> (TextResult);
+  get_deposit_address : () -> (TextResult);
+  get_icp_address : () -> (text) query;
+  get_icp_balance : () -> (Result);
+  get_principal : () -> (principal) query;
+  get_transaction : (nat64) -> (opt Transaction) query;
+  get_transaction_history : () -> (vec Transaction) query;
+  transfer : (principal, nat) -> (Result);
+  transfer_icp : (principal, nat) -> (Result);
+  withdraw_testbtc : (text, nat) -> (TextResult);
 }

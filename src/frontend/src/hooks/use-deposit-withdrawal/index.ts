@@ -7,7 +7,7 @@ import {
   formatCkTestBTCAmount,
   parseCkTestBTCAmount
 } from '@/services/deposit-withdrawal.service';
-import { useBackend } from '@/hooks/useBackend';
+import { useBackend } from '@/hooks/use-backend';
 
 interface UseDepositWithdrawalReturn {
   loading: boolean;

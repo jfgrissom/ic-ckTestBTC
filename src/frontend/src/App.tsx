@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useWallet } from '@/hooks/useWallet';
-import { useDepositWithdrawal } from '@/hooks/useDepositWithdrawal';
+import { useAuth } from '@/hooks/use-auth';
+import { useWallet } from '@/hooks/use-wallet';
+import { useDepositWithdrawal } from '@/hooks/use-deposit-withdrawal';
 
 // Components
 import LoginScreen from '@/components/auth/login-screen';
@@ -153,6 +153,7 @@ const App: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="transactions" className="space-y-6">
+                {console.log('App: Rendering TransactionsTab with transactions:', wallet.transactionHistory.length, 'loading:', wallet.transactionLoading)}
                 <TransactionsTab
                   transactions={wallet.transactionHistory}
                   loading={wallet.transactionLoading}
