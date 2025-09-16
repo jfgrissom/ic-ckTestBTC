@@ -1,6 +1,6 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { Principal } from '@dfinity/principal';
-import { getNetworkConfig } from '../types/backend.types';
+import { getNetworkConfig } from '@/types/backend.types';
 import { clearBackend, getBackend } from './backend.service';
 
 // Global state for auth client

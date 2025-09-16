@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ReceiveSectionProps } from '../../types/wallet.types';
+import { ReceiveSectionProps } from '@/types/wallet.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ForwardRefButton } from '@/components/common/ForwardRefButton';
+import { ForwardRefButton } from '@/components/common/forward-ref-button';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,

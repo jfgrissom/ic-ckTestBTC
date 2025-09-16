@@ -1,9 +1,28 @@
 import { useState, useEffect } from 'react';
-import { getBalance, getBtcAddress, transfer, useFaucet } from '../services/wallet.service';
-import { WalletState, WalletActions, TransactionState, TransactionActions } from '../types/wallet.types';
+import { getBalance, getBtcAddress, transfer, useFaucet } from '@/services/wallet.service';
+import { WalletState, WalletActions, TransactionState, TransactionActions } from '@/types/wallet.types';
+import { useTransactionHistory } from '@/hooks/useTransactionHistory';
+import { useICP } from '@/hooks/useICP';
+import { useBackend } from '@/hooks/useBackend';
+import { useError } from '@/contexts/error-context';
 
 interface UseWalletReturn extends WalletState, WalletActions, TransactionState, TransactionActions {
   handleFaucet: () => Promise<void>;
+  // ICP integration
+  icpBalance: string;
+  icpLoading: boolean;
+  icpError: string | null;
+  refreshICPBalance: () => Promise<void>;
+  transferICP: (to: string, amount: string) => Promise<{ success: boolean; blockIndex?: string; error?: string }>;
+  formatICPBalance: (balance: string) => string;
+  parseICPAmount: (amount: string) => string;
+  // Transaction history integration
+  transactionHistory: any[];
+  transactionLoading: boolean;
+  transactionError: string | null;
+  transactionStats: { total: number; confirmed: number; pending: number; failed: number };
+  refreshTransactions: () => Promise<void>;
+  getRecentTransactions: (limit?: number) => any[];
 }
 
 export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
@@ -12,6 +31,30 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   const [loading, setLoading] = useState(false);
   const [sendAmount, setSendAmount] = useState('');
   const [sendTo, setSendTo] = useState('');
+
+  const { backend } = useBackend();
+  const { showError } = useError();
+
+  // Initialize ICP functionality
+  const {
+    balance: icpBalance,
+    loading: icpLoading,
+    error: icpError,
+    refreshBalance: refreshICPBalance,
+    transfer: transferICP,
+    formatBalance: formatICPBalance,
+    parseAmount: parseICPAmount,
+  } = useICP();
+
+  // Initialize transaction history functionality
+  const {
+    transactions: transactionHistory,
+    loading: transactionLoading,
+    error: transactionError,
+    stats: transactionStats,
+    refreshTransactions,
+    getRecentTransactions,
+  } = useTransactionHistory();
 
   const loadBalance = async (): Promise<void> => {
     setLoading(true);
@@ -53,15 +96,32 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     try {
       const result = await transfer(sendTo, sendAmount);
       if (result.success) {
-        alert(`Transfer successful! Block index: ${result.blockIndex}`);
+        showError({
+          title: 'Transfer Successful',
+          message: `Your ckTestBTC transfer has been completed successfully.`,
+          details: `Block index: ${result.blockIndex}`,
+          severity: 'info'
+        });
         setSendAmount('');
         setSendTo('');
         await loadBalance();
+        // Refresh transaction history after successful send
+        await refreshTransactions();
       } else {
-        alert(`Transfer failed: ${result.error}`);
+        showError({
+          title: 'Transfer Failed',
+          message: 'Unable to complete the ckTestBTC transfer.',
+          details: result.error,
+          severity: 'error'
+        });
       }
     } catch (error: any) {
-      alert(`Transfer failed: ${error.message}`);
+      showError({
+        title: 'Transfer Error',
+        message: 'An unexpected error occurred during the transfer.',
+        details: error.message,
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -72,13 +132,31 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     try {
       const result = await useFaucet();
       if (result.success) {
-        alert(result.message);
+        showError({
+          title: 'Test Tokens Received',
+          message: result.message || 'Successfully received test ckTestBTC tokens.',
+          severity: 'info'
+        });
         await loadBalance();
+        // Refresh transaction history after successful faucet
+        await refreshTransactions();
       } else {
-        alert(`Error: ${result.error}`);
+        showError({
+          title: 'Faucet Error',
+          message: 'Unable to get test tokens from the faucet.',
+          details: result.error,
+          severity: 'error',
+          onRetry: handleFaucet
+        });
       }
     } catch (error: any) {
-      alert(`Failed to get test tokens: ${error.message}`);
+      showError({
+        title: 'Faucet Request Failed',
+        message: 'Failed to request test tokens from the faucet.',
+        details: error.message,
+        severity: 'error',
+        onRetry: handleFaucet
+      });
     } finally {
       setLoading(false);
     }
@@ -105,5 +183,20 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     setSendTo,
     handleSend,
     handleFaucet,
+    // ICP integration
+    icpBalance,
+    icpLoading,
+    icpError,
+    refreshICPBalance,
+    transferICP,
+    formatICPBalance,
+    parseICPAmount,
+    // Transaction history integration
+    transactionHistory,
+    transactionLoading,
+    transactionError,
+    transactionStats,
+    refreshTransactions,
+    getRecentTransactions,
   };
 };

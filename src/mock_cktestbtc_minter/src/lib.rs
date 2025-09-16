@@ -146,19 +146,24 @@ const NETWORK_FEE: u64 = 5000; // 5000 satoshi network fee
 #[init]
 fn init() {
     // Initialize storage
+    ic_cdk::println!("[MOCK_MINTER] Initializing mock ckTestBTC minter canister...");
     KNOWN_UTXOS.with(|utxos| utxos.borrow_mut().clear());
     PENDING_UTXOS.with(|pending| pending.borrow_mut().clear());
     WITHDRAWAL_REQUESTS.with(|withdrawals| withdrawals.borrow_mut().clear());
+    ic_cdk::println!("[MOCK_MINTER] Initialization complete. Ready to process TestBTC operations.");
 }
 
 // Convert TestBTC to ckTestBTC methods
 
 #[update]
 fn get_btc_address(args: GetBtcAddressArgs) -> String {
-    let owner = args.owner.unwrap_or_else(|| ic_cdk::caller());
+    let caller = ic_cdk::caller();
+    let owner = args.owner.unwrap_or(caller);
+    ic_cdk::println!("[MOCK_MINTER] get_btc_address called by {} for owner {}", caller, owner);
+
     let account = Account {
         owner,
-        subaccount: args.subaccount,
+        subaccount: args.subaccount.clone(),
     };
 
     // Generate a deterministic mock TestBTC address based on the account
@@ -166,34 +171,46 @@ fn get_btc_address(args: GetBtcAddressArgs) -> String {
     hasher.update(account.owner.as_slice());
     if let Some(ref subaccount) = account.subaccount {
         hasher.update(subaccount);
+        ic_cdk::println!("[MOCK_MINTER] Including subaccount in address generation: {:?}", subaccount);
     }
     let hash = hasher.finalize();
 
     // Create a mock TestBTC address (tb1q format for bech32 testnet)
     let addr_suffix = hex::encode(&hash[..20]);
-    format!("tb1q{}", &addr_suffix[..32])
+    let address = format!("tb1q{}", &addr_suffix[..32]);
+    ic_cdk::println!("[MOCK_MINTER] Generated TestBTC address: {}", address);
+    address
 }
 
 #[query]
 fn get_known_utxos(args: GetKnownUtxosArgs) -> Vec<Utxo> {
-    let owner = args.owner.unwrap_or_else(|| ic_cdk::caller());
+    let caller = ic_cdk::caller();
+    let owner = args.owner.unwrap_or(caller);
+    ic_cdk::println!("[MOCK_MINTER] get_known_utxos called by {} for owner {}", caller, owner);
+
     let account = Account {
         owner,
         subaccount: args.subaccount,
     };
 
-    KNOWN_UTXOS.with(|utxos| {
+    let utxos = KNOWN_UTXOS.with(|utxos| {
         utxos
             .borrow()
             .get(&account)
             .cloned()
             .unwrap_or_default()
-    })
+    });
+
+    ic_cdk::println!("[MOCK_MINTER] Found {} known UTXOs for account", utxos.len());
+    utxos
 }
 
 #[update]
 fn update_balance(args: UpdateBalanceArgs) -> UpdateBalanceResult {
-    let owner = args.owner.unwrap_or_else(|| ic_cdk::caller());
+    let caller = ic_cdk::caller();
+    let owner = args.owner.unwrap_or(caller);
+    ic_cdk::println!("[MOCK_MINTER] update_balance called by {} for owner {}", caller, owner);
+
     let account = Account {
         owner,
         subaccount: args.subaccount,
@@ -208,7 +225,10 @@ fn update_balance(args: UpdateBalanceArgs) -> UpdateBalanceResult {
             .unwrap_or_default()
     });
 
+    ic_cdk::println!("[MOCK_MINTER] Found {} pending UTXOs for account", pending_utxos.len());
+
     if pending_utxos.is_empty() {
+        ic_cdk::println!("[MOCK_MINTER] No new UTXOs to process, returning NoNewUtxos error");
         return Err(UpdateBalanceError::NoNewUtxos {
             current_confirmations: Some(6),
             required_confirmations: 6,
@@ -234,6 +254,11 @@ fn update_balance(args: UpdateBalanceArgs) -> UpdateBalanceResult {
             let minted_amount = utxo.value.saturating_sub(DEPOSIT_FEE);
             total_minted += minted_amount;
 
+            ic_cdk::println!(
+                "[MOCK_MINTER] Minting UTXO: value={}, minted_amount={}, block_index={}",
+                utxo.value, minted_amount, block_index
+            );
+
             utxo_statuses.push(UtxoStatus::Minted {
                 block_index,
                 minted_amount,
@@ -256,10 +281,12 @@ fn update_balance(args: UpdateBalanceArgs) -> UpdateBalanceResult {
 
     // Mock: Call the ledger to mint tokens (in real implementation)
     if total_minted > 0 {
+        ic_cdk::println!("[MOCK_MINTER] Total minted amount: {} satoshi", total_minted);
         // This would call the ledger canister to mint ckTestBTC
         // For now, just return success
     }
 
+    ic_cdk::println!("[MOCK_MINTER] Successfully processed {} UTXOs", utxo_statuses.len());
     Ok(utxo_statuses)
 }
 
@@ -289,8 +316,15 @@ fn get_withdrawal_account() -> Account {
 
 #[update]
 fn retrieve_btc(args: RetrieveBtcArgs) -> RetrieveBtcResult {
+    let caller = ic_cdk::caller();
+    ic_cdk::println!(
+        "[MOCK_MINTER] retrieve_btc called by {} for {} satoshi to address {}",
+        caller, args.amount, args.address
+    );
+
     // Validate TestBTC address format (basic validation)
     if !args.address.starts_with("tb1") && !args.address.starts_with("2") && !args.address.starts_with("m") && !args.address.starts_with("n") {
+        ic_cdk::println!("[MOCK_MINTER] ERROR: Invalid TestBTC address format: {}", args.address);
         return Err(RetrieveBtcError::MalformedAddress(
             "Invalid TestBTC address format".to_string(),
         ));
@@ -298,6 +332,10 @@ fn retrieve_btc(args: RetrieveBtcArgs) -> RetrieveBtcResult {
 
     // Check minimum withdrawal amount
     if args.amount < MIN_WITHDRAWAL_AMOUNT {
+        ic_cdk::println!(
+            "[MOCK_MINTER] ERROR: Amount {} is below minimum withdrawal amount {}",
+            args.amount, MIN_WITHDRAWAL_AMOUNT
+        );
         return Err(RetrieveBtcError::AmountTooLow(MIN_WITHDRAWAL_AMOUNT));
     }
 
@@ -329,6 +367,11 @@ fn retrieve_btc(args: RetrieveBtcArgs) -> RetrieveBtcResult {
     // 3. Queue TestBTC transaction
     // 4. Return block index for tracking
 
+    ic_cdk::println!(
+        "[MOCK_MINTER] Successfully queued withdrawal request with block_index={}",
+        block_index
+    );
+
     Ok(RetrieveBtcOk { block_index })
 }
 
@@ -356,6 +399,11 @@ pub fn add_pending_utxo(account: Account, utxo: Utxo) {
 
 #[update]
 pub fn simulate_testbtc_deposit(account: Account, amount: u64) {
+    ic_cdk::println!(
+        "[MOCK_MINTER] Simulating TestBTC deposit of {} satoshi for account {}",
+        amount, account.owner
+    );
+
     // Create a mock UTXO for testing
     let mut hasher = Sha256::new();
     hasher.update(account.owner.as_slice());
@@ -365,12 +413,17 @@ pub fn simulate_testbtc_deposit(account: Account, amount: u64) {
 
     let utxo = Utxo {
         outpoint: UtxoOutpoint {
-            txid,
+            txid: txid.clone(),
             vout: 0,
         },
         value: amount,
         height: 2500000, // Mock block height
     };
+
+    ic_cdk::println!(
+        "[MOCK_MINTER] Created mock UTXO with txid={} and value={}",
+        hex::encode(&txid[..8]), amount
+    );
 
     add_pending_utxo(account, utxo);
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LoginScreenProps } from '../../types/auth.types';
+import { LoginScreenProps } from '@/types/auth.types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 

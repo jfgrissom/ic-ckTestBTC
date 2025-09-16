@@ -1,6 +1,6 @@
 import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
-import { getNetworkConfig } from '../types/backend.types';
+import { getNetworkConfig } from '@/types/backend.types';
 
 /**
  * Get wallet balance

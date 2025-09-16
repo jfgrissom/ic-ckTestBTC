@@ -441,16 +441,48 @@ fn icrc2_transfer_from(args: TransferFromArgs) -> TransferFromResult {
 // Helper function for testing - mint tokens
 #[update]
 pub fn mint(to: Account, amount: Nat) -> TransferResult {
-    // Only allow minting from the minter account
+    // For local development, allow minting from backend and mock minter canisters
     let caller = ic_cdk::caller();
-    let minter_principal = Principal::from_text("ml52i-qqaaa-aaaar-qaaba-cai").unwrap();
-    
-    if caller != minter_principal {
+
+    // Get the minter canister ID from environment or use the mock minter ID
+    let mock_minter_id = env!("LOCAL_MOCK_MINTER_CANISTER_ID");
+    let minter_principal = if !mock_minter_id.is_empty() {
+        Principal::from_text(mock_minter_id).unwrap_or_else(|_| {
+            // Fallback to the deployed mock minter canister ID
+            Principal::from_text("ulvla-h7777-77774-qaacq-cai").unwrap()
+        })
+    } else {
+        // Default to the mock minter canister ID we deployed
+        Principal::from_text("ulvla-h7777-77774-qaacq-cai").unwrap()
+    };
+
+    // Also allow the backend canister to mint for testing
+    let backend_id = env!("CANISTER_ID_BACKEND");
+    let backend_principal = if !backend_id.is_empty() {
+        Principal::from_text(backend_id).ok()
+    } else {
+        Principal::from_text("uxrrr-q7777-77774-qaaaq-cai").ok()
+    };
+
+    // Check if caller is authorized to mint
+    let is_authorized = caller == minter_principal ||
+                       backend_principal.map_or(false, |p| p == caller);
+
+    if !is_authorized {
+        ic_cdk::println!(
+            "[MOCK_LEDGER] Mint denied: caller {} is not authorized (expected minter: {} or backend: {:?})",
+            caller, minter_principal, backend_principal
+        );
         return Err(TransferError::GenericError {
             error_code: Nat::from(1u64),
-            message: "Only minter can mint tokens".to_string(),
+            message: format!("Only authorized minters can mint tokens. Caller: {}", caller),
         });
     }
+
+    ic_cdk::println!(
+        "[MOCK_LEDGER] Minting {} tokens to account {} (authorized by {})",
+        amount, to.owner, caller
+    );
 
     BALANCES.with(|b| {
         let mut balances = b.borrow_mut();

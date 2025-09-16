@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserHeaderProps } from '../../types/auth.types';
+import { UserHeaderProps } from '@/types/auth.types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

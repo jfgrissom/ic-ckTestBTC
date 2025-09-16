@@ -1,7 +1,7 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { idlFactory } from 'declarations/backend';
-import { BackendActor, getNetworkConfig } from '../types/backend.types';
+import { BackendActor, getNetworkConfig } from '@/types/backend.types';
 
 // Global state for backend actor
 let backendActor: BackendActor | null = null;

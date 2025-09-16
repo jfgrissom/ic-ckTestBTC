@@ -250,4 +250,63 @@ When refactoring existing components to follow these standards:
 - Contains business logic directly in components
 - Fails lint, type-check, or test commands
 
+## Import Path Requirements
+
+### **MANDATORY: Use Path Aliases - NO Relative Imports**
+
+**CRITICAL RULE**: All imports MUST use the `@/` path alias. Relative imports (`../`, `./`) are FORBIDDEN except for imports within the same component directory.
+
+**✅ CORRECT Import Patterns:**
+```typescript
+// Types
+import { LoginScreenProps } from '@/types/auth.types';
+import { WalletState } from '@/types/wallet.types';
+
+// Shared Components
+import TokenBalance from '@/components/shared/token-balance';
+import QRCode from '@/components/shared/qr-code';
+
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+
+// Services
+import { getBalance } from '@/services/wallet.service';
+import { initAuth } from '@/services/auth.service';
+
+// Hooks
+import { useAuth } from '@/hooks/useAuth';
+
+// Utilities
+import { cn } from '@/lib';
+```
+
+**❌ FORBIDDEN Import Patterns:**
+```typescript
+// NEVER use relative paths - NO EXCEPTIONS
+import { LoginScreenProps } from '../../../types/auth.types';  // WRONG
+import TokenBalance from '../../shared/token-balance';         // WRONG
+import { getBalance } from '../services/wallet.service';       // WRONG
+import { ComponentSpecificType } from './types';               // WRONG
+import { helperFunction } from './utils';                      // WRONG
+```
+
+**NO EXCEPTIONS**: ALL imports must use @/ path aliases, even for same-directory imports.
+
+### **Path Alias Configuration**
+
+The project is configured with these aliases in `tsconfig.json`:
+- `@/*` → `src/frontend/src/*`
+- `@/components/` → `src/frontend/src/components/`
+- `@/services/` → `src/frontend/src/services/`
+- `@/types/` → `src/frontend/src/types/`
+- `@/hooks/` → `src/frontend/src/hooks/`
+- `@/lib/` → `src/frontend/src/lib/`
+
+## Enforcement
+
+**BLOCKING**: No pull request will be accepted that contains:
+- Relative imports using `../` or complex `./` paths
+- Direct file paths that could use aliases
+
 This structure ensures consistency, maintainability, and scalability across the entire frontend codebase.

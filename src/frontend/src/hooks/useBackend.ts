@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AuthClient } from '@dfinity/auth-client';
-import { initializeBackend, clearBackend } from '../services/backend.service';
-import { BackendState, BackendActions, BackendActor } from '../types/backend.types';
+import { initializeBackend, clearBackend } from '@/services/backend.service';
+import { BackendState, BackendActions, BackendActor } from '@/types/backend.types';
 
 export const useBackend = (): BackendState & BackendActions => {
   const [backend, setBackend] = useState<BackendActor | null>(null);

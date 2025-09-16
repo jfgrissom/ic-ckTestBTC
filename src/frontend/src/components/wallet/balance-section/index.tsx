@@ -1,6 +1,6 @@
 import React from 'react';
-import { BalanceSectionProps } from '../../types/wallet.types';
-import { getNetworkConfig } from '../../types/backend.types';
+import { BalanceSectionProps } from '@/types/wallet.types';
+import { getNetworkConfig } from '@/types/backend.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

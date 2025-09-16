@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AuthClient } from '@dfinity/auth-client';
-import { initAuth, login as authLogin, logout as authLogout } from '../services/auth.service';
-import { initializeBackend } from '../services/backend.service';
-import { AuthState, AuthActions } from '../types/auth.types';
+import { initAuth, login as authLogin, logout as authLogout } from '@/services/auth.service';
+import { initializeBackend } from '@/services/backend.service';
+import { AuthState, AuthActions } from '@/types/auth.types';
 
 export const useAuth = (): AuthState & AuthActions => {
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
