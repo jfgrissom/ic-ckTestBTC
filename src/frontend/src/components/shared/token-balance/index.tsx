@@ -22,16 +22,10 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
     if (loading) return 'Loading...';
     if (!balance || balance === '0') return '0.00000000';
 
-    // Convert from smallest units to display units
+    // Balance is already formatted by the service layer
+    // Just ensure consistent decimal places
     const numBalance = parseFloat(balance);
-    if (token === 'ckTestBTC') {
-      // ckTestBTC has 8 decimals
-      return (numBalance / 100000000).toFixed(8);
-    } else if (token === 'ICP') {
-      // ICP has 8 decimals
-      return (numBalance / 100000000).toFixed(8);
-    }
-    return balance;
+    return numBalance.toFixed(8);
   };
 
   const getTokenColor = (token: string) => {

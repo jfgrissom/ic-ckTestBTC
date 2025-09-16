@@ -27,11 +27,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   userPrincipal,
 }) => {
   const formatAmount = (amount: string, token: string) => {
+    // Amount is already formatted by the service layer
     const numAmount = parseFloat(amount);
-    if (token === 'ckTestBTC' || token === 'ICP') {
-      return (numAmount / 100000000).toFixed(8);
-    }
-    return amount;
+    return numAmount.toFixed(8);
   };
 
   const formatAddress = (address: string) => {

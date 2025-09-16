@@ -56,22 +56,7 @@ fi
 # Deploy mock canisters if they don't have WASM modules installed
 echo -e "${YELLOW}Checking mock canister deployments...${NC}"
 
-# Check and deploy mock_cktestbtc_ledger
-LEDGER_STATUS=$(dfx canister status mock_cktestbtc_ledger 2>/dev/null | grep "Module hash:" | cut -d: -f2 | tr -d ' ')
-if [ "$LEDGER_STATUS" = "None" ]; then
-    echo -e "${YELLOW}Deploying mock_cktestbtc_ledger WASM...${NC}"
-    dfx deploy mock_cktestbtc_ledger
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ Mock ckTestBTC Ledger deployed successfully${NC}"
-    else
-        echo -e "${RED}❌ Failed to deploy mock_cktestbtc_ledger${NC}"
-        exit 1
-    fi
-else
-    echo -e "${GREEN}✓ Mock ckTestBTC Ledger already deployed${NC}"
-fi
-
-# Check and deploy mock_cktestbtc_minter
+# Deploy minter FIRST (ledger depends on minter ID)
 MINTER_STATUS=$(dfx canister status mock_cktestbtc_minter 2>/dev/null | grep "Module hash:" | cut -d: -f2 | tr -d ' ')
 if [ "$MINTER_STATUS" = "None" ]; then
     echo -e "${YELLOW}Deploying mock_cktestbtc_minter WASM...${NC}"
@@ -84,6 +69,23 @@ if [ "$MINTER_STATUS" = "None" ]; then
     fi
 else
     echo -e "${GREEN}✓ Mock ckTestBTC Minter already deployed${NC}"
+fi
+
+# Deploy ledger AFTER minter (needs minter ID)
+LEDGER_STATUS=$(dfx canister status mock_cktestbtc_ledger 2>/dev/null | grep "Module hash:" | cut -d: -f2 | tr -d ' ')
+if [ "$LEDGER_STATUS" = "None" ]; then
+    echo -e "${YELLOW}Deploying mock_cktestbtc_ledger WASM...${NC}"
+    # Get minter canister ID for ledger compilation
+    MINTER_ID=$(dfx canister id mock_cktestbtc_minter)
+    LOCAL_MOCK_MINTER_CANISTER_ID="$MINTER_ID" dfx deploy mock_cktestbtc_ledger
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Mock ckTestBTC Ledger deployed successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to deploy mock_cktestbtc_ledger${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ Mock ckTestBTC Ledger already deployed${NC}"
 fi
 
 # Verify all canisters were created successfully

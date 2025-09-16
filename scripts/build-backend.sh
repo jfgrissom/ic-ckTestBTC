@@ -59,7 +59,7 @@ echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
 
 # Build the backend without deploying
 echo -e "${GREEN}Building backend canister WASM...${NC}"
-dfx build backend
+LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" dfx build backend
 
 # Check if build was successful
 if [ $? -eq 0 ]; then

@@ -79,8 +79,9 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
   };
 
   const formatBalance = (balance: string) => {
+    // Balance is already formatted by the service layer
     const numBalance = parseFloat(balance);
-    return (numBalance / 100000000).toFixed(8);
+    return numBalance.toFixed(8);
   };
 
   return (

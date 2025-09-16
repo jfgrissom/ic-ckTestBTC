@@ -116,7 +116,7 @@ class TransactionService {
       id: Number(backendTx.id),
       tx_type: txType,
       token: backendTx.token,
-      amount: backendTx.amount.toString(),
+      amount: (Number(backendTx.amount) / 100000000).toFixed(8),
       from: backendTx.from,
       to: backendTx.to,
       status: status,

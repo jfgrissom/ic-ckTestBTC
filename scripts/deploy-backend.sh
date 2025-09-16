@@ -81,7 +81,7 @@ fi
 
 # Deploy the backend
 echo -e "${GREEN}Deploying backend canister...${NC}"
-dfx deploy backend
+LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" dfx deploy backend
 
 # Check if deployment was successful
 if [ $? -ne 0 ]; then

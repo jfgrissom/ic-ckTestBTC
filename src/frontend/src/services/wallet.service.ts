@@ -13,10 +13,16 @@ export const getBalance = async (): Promise<{ success: boolean; balance?: string
 
   try {
     const result = await backend.get_balance();
+    console.log('🔍 BALANCE: Raw backend result:', result);
     if ('Ok' in result) {
       const balanceValue = result.Ok.toString();
+      console.log('🔍 BALANCE: result.Ok type:', typeof result.Ok);
+      console.log('🔍 BALANCE: result.Ok value:', result.Ok);
+      console.log('🔍 BALANCE: balanceValue string:', balanceValue);
+      console.log('🔍 BALANCE: Number(balanceValue):', Number(balanceValue));
       // Convert from smallest unit (satoshi-like) to ckTestBTC
       const formattedBalance = (Number(balanceValue) / 100000000).toFixed(8);
+      console.log('🔍 BALANCE: formattedBalance:', formattedBalance);
       return { success: true, balance: formattedBalance };
     } else {
       return { success: false, error: result.Err };
@@ -91,10 +97,14 @@ export const useFaucet = async (): Promise<{ success: boolean; message?: string;
   }
 
   try {
+    console.log('🔍 FAUCET: Calling backend.faucet()...');
     const result = await backend.faucet();
+    console.log('🔍 FAUCET: Raw result:', result);
     if ('Ok' in result) {
+      console.log('🔍 FAUCET: Success message:', result.Ok);
       return { success: true, message: result.Ok };
     } else {
+      console.log('🔍 FAUCET: Error:', result.Err);
       return { success: false, error: result.Err };
     }
   } catch (error: any) {
