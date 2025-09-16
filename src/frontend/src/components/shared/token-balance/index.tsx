@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib';
+import { cn, formatTokenBalance } from '@/lib';
 
 export interface TokenBalanceProps {
   token: 'ICP' | 'ckTestBTC';
@@ -18,15 +18,6 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
   className,
   onRefresh,
 }) => {
-  const formatBalance = (balance: string, token: string) => {
-    if (loading) return 'Loading...';
-    if (!balance || balance === '0') return '0.00000000';
-
-    // Balance is already formatted by the service layer
-    // Just ensure consistent decimal places
-    const numBalance = parseFloat(balance);
-    return numBalance.toFixed(8);
-  };
 
   const getTokenColor = (token: string) => {
     switch (token) {
@@ -49,7 +40,7 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
             </Badge>
             <div>
               <div className="text-2xl font-bold">
-                {formatBalance(balance, token)}
+                {formatTokenBalance(balance, token, loading)}
               </div>
               <div className="text-sm text-gray-500">
                 {token} Balance

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
+import { formatTokenBalance, validatePrincipal } from '@/lib';
 
 interface SendModalProps {
   open: boolean;
@@ -35,28 +36,11 @@ const SendModal: React.FC<SendModalProps> = ({
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
 
-  const formatBalance = (balance: string, token: 'ICP' | 'ckTestBTC') => {
-    const numBalance = parseFloat(balance || '0');
-    if (token === 'ICP') {
-      // ICP uses 8 decimal places (100000000 = 1 ICP)
-      return (numBalance / 100000000).toFixed(8);
-    } else {
-      // ckTestBTC uses 8 decimal places (100000000 = 1 ckTestBTC)
-      return (numBalance / 100000000).toFixed(8);
-    }
-  };
 
   const getCurrentBalance = () => {
     return selectedToken === 'ICP' ? icpBalance : ckTestBTCBalance;
   };
 
-  const validatePrincipal = (principal: string) => {
-    // Basic Principal validation - should be base32 encoded and end with specific suffixes
-    const principalRegex = /^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$/;
-    const canisterRegex = /^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$/;
-
-    return principalRegex.test(principal) || canisterRegex.test(principal);
-  };
 
   const validateInputs = () => {
     setError('');
@@ -82,7 +66,7 @@ const SendModal: React.FC<SendModalProps> = ({
       return false;
     }
 
-    const maxAmount = parseFloat(formatBalance(getCurrentBalance(), selectedToken));
+    const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
     if (numAmount > maxAmount) {
       setError('Amount exceeds available balance');
       return false;
@@ -122,7 +106,7 @@ const SendModal: React.FC<SendModalProps> = ({
   };
 
   const handleMaxClick = () => {
-    const maxAmount = parseFloat(formatBalance(getCurrentBalance(), selectedToken));
+    const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
     // Reserve some for fees
     const feeReserve = selectedToken === 'ICP' ? 0.0001 : 0.00001;
     const availableAmount = Math.max(0, maxAmount - feeReserve);
@@ -163,7 +147,7 @@ const SendModal: React.FC<SendModalProps> = ({
                 <Badge variant="secondary" className="mr-2">
                   ckTestBTC
                 </Badge>
-                {formatBalance(ckTestBTCBalance, 'ckTestBTC')}
+                {formatTokenBalance(ckTestBTCBalance, 'ckTestBTC')}
               </Button>
               <Button
                 variant={selectedToken === 'ICP' ? 'default' : 'outline'}
@@ -174,7 +158,7 @@ const SendModal: React.FC<SendModalProps> = ({
                 <Badge variant="secondary" className="mr-2">
                   ICP
                 </Badge>
-                {formatBalance(icpBalance, 'ICP')}
+                {formatTokenBalance(icpBalance, 'ICP')}
               </Button>
             </div>
           </div>
@@ -203,7 +187,7 @@ const SendModal: React.FC<SendModalProps> = ({
                 Amount ({selectedToken})
               </label>
               <div className="text-xs text-gray-500">
-                Balance: {formatBalance(getCurrentBalance(), selectedToken)} {selectedToken}
+                Balance: {formatTokenBalance(getCurrentBalance(), selectedToken)} {selectedToken}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -218,7 +202,7 @@ const SendModal: React.FC<SendModalProps> = ({
               type="number"
               step="0.00000001"
               min={selectedToken === 'ICP' ? '0.0001' : '0.00001'}
-              max={formatBalance(getCurrentBalance(), selectedToken)}
+              max={formatTokenBalance(getCurrentBalance(), selectedToken)}
               placeholder="0.00000000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

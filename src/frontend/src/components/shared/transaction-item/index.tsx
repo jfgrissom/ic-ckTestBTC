@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib';
+import { cn, formatAmount } from '@/lib';
 
 export interface Transaction {
   id: number;
@@ -26,11 +26,6 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   className,
   userPrincipal,
 }) => {
-  const formatAmount = (amount: string, token: string) => {
-    // Amount is already formatted by the service layer
-    const numAmount = parseFloat(amount);
-    return numAmount.toFixed(8);
-  };
 
   const formatAddress = (address: string) => {
     if (address.length > 20) {
@@ -97,7 +92,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
                   isOutgoing ? 'text-red-600' : isIncoming ? 'text-green-600' : 'text-gray-900'
                 }`}>
                   {isOutgoing ? '-' : isIncoming ? '+' : ''}
-                  {formatAmount(transaction.amount, transaction.token)} {transaction.token}
+                  {formatAmount(transaction.amount)} {transaction.token}
                 </span>
               </div>
               <div className="text-sm text-gray-500">

@@ -153,7 +153,6 @@ const App: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="transactions" className="space-y-6">
-                {console.log('App: Rendering TransactionsTab with transactions:', wallet.transactionHistory.length, 'loading:', wallet.transactionLoading)}
                 <TransactionsTab
                   transactions={wallet.transactionHistory}
                   loading={wallet.transactionLoading}

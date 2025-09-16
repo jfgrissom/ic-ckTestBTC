@@ -23,37 +23,27 @@ export const useTransactionHistory = (): UseTransactionHistoryReturn => {
 
   const { backend: backendActor } = useBackend();
 
-  console.log('useTransactionHistory: Hook initialized, backendActor:', !!backendActor);
 
   // Set backend actor when available
   useEffect(() => {
-    console.log('useTransactionHistory: Backend actor changed:', !!backendActor);
     if (backendActor) {
-      console.log('useTransactionHistory: Setting backend actor on transaction service');
       transactionService.setBackendActor(backendActor);
     }
   }, [backendActor]);
 
   const refreshTransactions = async (): Promise<void> => {
-    console.log('useTransactionHistory: refreshTransactions called, backendActor:', !!backendActor);
-
     // Check global backend service instead of React hook state
     const { getBackend } = await import('@/services/backend.service');
     const globalBackend = getBackend();
-    console.log('useTransactionHistory: Global backend available:', !!globalBackend);
 
     if (!globalBackend) {
-      console.log('useTransactionHistory: Global backend not initialized');
       setError('Backend not initialized');
       return;
     }
-
-    console.log('useTransactionHistory: Starting transaction refresh');
     setLoading(true);
     setError(null);
 
     try {
-      console.log('useTransactionHistory: Calling getTransactionHistory service');
       const result = await getTransactionHistory();
 
       if (result.success && result.data) {
@@ -101,9 +91,7 @@ export const useTransactionHistory = (): UseTransactionHistoryReturn => {
 
   // Load transactions when backend becomes available
   useEffect(() => {
-    console.log('useTransactionHistory: Load effect triggered, backendActor:', !!backendActor);
     if (backendActor) {
-      console.log('useTransactionHistory: Calling refreshTransactions');
       refreshTransactions();
     }
   }, [backendActor]);

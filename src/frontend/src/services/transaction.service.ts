@@ -27,21 +27,16 @@ class TransactionService {
   async getTransactionHistory(): Promise<TransactionServiceResult> {
     // Use the global backend service instead of the stored actor
     const backendActor = (await import('@/services/backend.service')).getBackend();
-    console.log('TransactionService: Backend actor from global service:', !!backendActor);
 
     if (!backendActor) {
-      console.log('TransactionService: No backend actor available');
       return { success: false, error: 'Backend not initialized' };
     }
 
     try {
-      console.log('TransactionService: Calling get_transaction_history...');
       const result = await (backendActor as any).get_transaction_history();
-      console.log('TransactionService: Raw backend result:', result);
 
       // Transform backend transactions to frontend format
       const transactions = result.map(this.transformBackendTransaction.bind(this));
-      console.log('TransactionService: Transformed transactions:', transactions);
 
       return {
         success: true,

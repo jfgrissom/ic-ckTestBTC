@@ -15,7 +15,6 @@ export const useAuth = (): AuthState & AuthActions => {
   // Handle when backend becomes available after initialization
   useEffect(() => {
     if (backend && authClient && !isAuthenticated) {
-      console.log('useAuth: Backend is now available, completing authentication');
       completeAuthentication();
     }
   }, [backend, authClient, isAuthenticated]);
@@ -24,11 +23,9 @@ export const useAuth = (): AuthState & AuthActions => {
     if (!backend) return;
 
     try {
-      console.log('useAuth: Getting user principal');
       const userPrincipal = await backend.get_principal();
       setPrincipal(userPrincipal.toString());
 
-      console.log('useAuth: Setting authenticated to true');
       setIsAuthenticated(true);
     } catch (error) {
       console.error('Failed to complete authentication:', error);
@@ -54,11 +51,9 @@ export const useAuth = (): AuthState & AuthActions => {
   };
 
   const handleAuthenticated = async (client: AuthClient): Promise<void> => {
-    console.log('useAuth: handleAuthenticated called');
     setLoading(true);
     try {
       // Initialize backend using the useBackend hook
-      console.log('useAuth: Initializing backend actor');
       await initializeBackendActor(client);
 
       // The completeAuthentication will be called via useEffect when backend becomes available

@@ -2,7 +2,8 @@
 
 This document tracks the implementation status of features and tasks for the
 ckTestBTC Wallet project. It serves as a comprehensive record of all development
-work completed on this Internet Computer-based Bitcoin testnet wallet application.
+work completed on this Internet Computer-based Bitcoin testnet wallet
+application.
 
 ## Legend
 
@@ -28,7 +29,9 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### Wallet Management
 
 - ✅ **ckTestBTC Integration:** Bitcoin testnet token management
-  - ✅ Backend canister communicates with ckTestBTC canister (g4xu7-jiaaa-aaaan-aaaaq-cai)
+
+  - ✅ Backend canister communicates with ckTestBTC canister
+    (g4xu7-jiaaa-aaaan-aaaaq-cai)
   - ✅ **Local Development Mode:** Mock functionality for local testing
     - ✅ Automatic detection of local vs mainnet environment
     - ✅ Mock balance (0.5 ckTestBTC) for local development
@@ -40,7 +43,9 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ Balance refresh functionality
 
 - ✅ **Transaction Management:** Send and receive ckTestBTC
-  - ✅ Send ckTestBTC to other principals (mock functionality in local development)
+
+  - ✅ Send ckTestBTC to other principals (mock functionality in local
+    development)
   - ✅ Amount validation and conversion (human units to satoshi-like units)
   - ✅ Transaction result handling with success/error feedback
   - ✅ Principal ID validation for recipients
@@ -48,17 +53,26 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ Mock transaction simulation for local testing
 
 - ✅ **Transaction History & Recording:** Complete transaction tracking system
+
   - ✅ **Mint Transaction Support:** Records token mint operations from faucet
-    - ✅ Backend: Added `Mint` to `TransactionType` enum with proper Candid export
-    - ✅ Backend: Updated faucet function to record mint transactions with block indices
-    - ✅ Frontend: Emerald-colored mint transaction badges with "New Tokens Minted" display
+    - ✅ Backend: Added `Mint` to `TransactionType` enum with proper Candid
+      export
+    - ✅ Backend: Updated faucet function to record mint transactions with block
+      indices
+    - ✅ Frontend: Emerald-colored mint transaction badges with "New Tokens
+      Minted" display
     - ✅ Frontend: Mint transaction filter option in transaction history
-  - ✅ **Transaction Storage:** Backend stores all transactions in thread-local storage
-  - ✅ **Transaction Retrieval:** Frontend service retrieves and displays transaction history
-  - ✅ **Transaction Statistics:** Real-time counts for confirmed/pending/failed/mint transactions
-  - ✅ **Transaction Filtering:** Filter by type (Send/Receive/Deposit/Withdraw/Mint), token, status
+  - ✅ **Transaction Storage:** Backend stores all transactions in thread-local
+    storage
+  - ✅ **Transaction Retrieval:** Frontend service retrieves and displays
+    transaction history
+  - ✅ **Transaction Statistics:** Real-time counts for
+    confirmed/pending/failed/mint transactions
+  - ✅ **Transaction Filtering:** Filter by type
+    (Send/Receive/Deposit/Withdraw/Mint), token, status
   - ✅ **Transaction Search:** Search by address, transaction ID, or block index
-  - ✅ **Transaction Pagination:** Paginated view with configurable items per page
+  - ✅ **Transaction Pagination:** Paginated view with configurable items per
+    page
 
 - ✅ **Wallet Display:** User-friendly wallet interface
   - ✅ Principal ID display with truncation for readability
@@ -69,6 +83,7 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### Backend Architecture
 
 - ✅ **Rust Canister Implementation:** High-performance backend
+
   - ✅ ic-cdk framework integration
   - ✅ Candid interface definitions (backend.did)
   - ✅ Inter-canister communication with ckTestBTC canister
@@ -88,18 +103,22 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 
 ### Core UI/UX
 
-- ✅ **Modern React Application:** TypeScript-based frontend with modular architecture
+- ✅ **Modern React Application:** TypeScript-based frontend with modular
+  architecture
+
   - ✅ React 18 with functional components and hooks (no class-based components)
   - ✅ TypeScript for type safety with auto-generated backend type integration
   - ✅ Modular component architecture with separation of concerns
-  - ✅ Custom hooks for business logic encapsulation (`useAuth`, `useWallet`, `useBackend`)
+  - ✅ Custom hooks for business logic encapsulation (`useAuth`, `useWallet`,
+    `useBackend`)
   - ✅ Service layer for backend communication and business logic
   - ✅ Type-safe interfaces preventing frontend-backend type drift
   - ✅ Component-specific CSS modules for styling isolation
   - ✅ Responsive design for various screen sizes
   - ✅ Clean, professional wallet interface
 
-- ✅ **State Management:** Efficient application state handling with functional patterns
+- ✅ **State Management:** Efficient application state handling with functional
+  patterns
   - ✅ Custom React hooks for state management (purely functional, no classes)
   - ✅ Authentication state persistence with proper initialization order
   - ✅ Backend actor initialization before authentication state updates
@@ -109,6 +128,7 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### User Interface Components
 
 - ✅ **Authentication UI:** Seamless login experience
+
   - ✅ Internet Identity login button
   - ✅ User principal display
   - ✅ Logout functionality
@@ -124,13 +144,15 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### Development Infrastructure
 
 - ✅ **Vite Build System:** Modern development experience
+
   - ✅ Fast development server with hot reload
-  - ✅ Environment variable support (VITE_ prefix)
+  - ✅ Environment variable support (VITE\_ prefix)
   - ✅ TypeScript compilation
   - ✅ Optimized production builds
   - ✅ Proper asset handling
 
-- ✅ **Environment Configuration:** Flexible deployment setup with dynamic canister management
+- ✅ **Environment Configuration:** Flexible deployment setup with dynamic
+  canister management
   - ✅ Local development environment variables
   - ✅ Dynamic canister ID management via automated .env generation
   - ✅ Automated environment variable updates during deployment
@@ -143,6 +165,7 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### Internet Computer Integration
 
 - ✅ **DFX Integration:** Comprehensive IC development setup
+
   - ✅ dfx.json configuration for all canisters
   - ✅ Local replica deployment scripts
   - ✅ Canister build and deployment automation
@@ -158,27 +181,37 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 
 ### Build & Deployment
 
-- ✅ **Development Workflow:** Streamlined development process with automated setup
+- ✅ **Development Workflow:** Streamlined development process with automated
+  setup
+
   - ✅ npm scripts for common development tasks
-  - ✅ **Automated Development Setup:** Complete one-command development environment
-    - ✅ `npm run dfx:create` - Automated canister creation with existence checking
+  - ✅ **Automated Development Setup:** Complete one-command development
+    environment
+    - ✅ `npm run dfx:create` - Automated canister creation with existence
+      checking
     - ✅ `npm run dfx:setup` - Complete setup (create + deploy canisters)
     - ✅ `npm run dev` - Full development workflow with automated prerequisites
     - ✅ Intelligent canister management avoiding duplicate creation errors
-    - ✅ **Internet Identity Auto-Installation:** Automatic WASM deployment detection and installation
+    - ✅ **Internet Identity Auto-Installation:** Automatic WASM deployment
+      detection and installation
   - ✅ Automatic dfx deployment before frontend dev server
   - ✅ TypeScript compilation and checking
   - ✅ Rust security vulnerability scanning
   - ✅ Hot reload during development
 
-- ✅ **Advanced Build Tooling:** Robust build automation with DFX bug workarounds
+- ✅ **Advanced Build Tooling:** Robust build automation with DFX bug
+  workarounds
+
   - ✅ Modular shell scripts for build process (`scripts/build-backend.sh`)
-  - ✅ **Intelligent Canister Setup:** Automated canister lifecycle management (`scripts/setup-canisters.sh`)
+  - ✅ **Intelligent Canister Setup:** Automated canister lifecycle management
+    (`scripts/setup-canisters.sh`)
     - ✅ DFX network connectivity verification before canister operations
     - ✅ Smart canister existence checking to avoid creation conflicts
-    - ✅ **Internet Identity WASM Auto-Installation:** Detects empty canisters and installs WASM modules
+    - ✅ **Internet Identity WASM Auto-Installation:** Detects empty canisters
+      and installs WASM modules
     - ✅ Comprehensive canister verification and status reporting
-    - ✅ Proper mock canister naming (`mock_cktestbtc_ledger`, `mock_cktestbtc_minter`)
+    - ✅ Proper mock canister naming (`mock_cktestbtc_ledger`,
+      `mock_cktestbtc_minter`)
   - ✅ Reliable Candid interface generation (`scripts/generate-declarations.sh`)
   - ✅ Complete deployment automation (`scripts/deploy-backend.sh`)
   - ✅ Manual TypeScript binding generation to bypass DFX limitations
@@ -187,13 +220,21 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ WASM file verification and size reporting
   - ✅ Comprehensive build status reporting with colored output
 
-- ✅ **Environment Variable Persistence:** Robust variable management across DFX restarts
-  - ✅ **Persistent Storage in dfx.json:** Environment variables stored in dfx.json env section
-  - ✅ **Enhanced npm Script Workflow:** Proper sequencing (dfx:create → update:env → dfx:deploy)
-  - ✅ **Runtime Environment Loading:** Scripts load variables from dfx.json using jq with fallbacks
-  - ✅ **Mock Canister WASM Deployment:** Automatic deployment of WASM modules for mock canisters
-  - ✅ **Complete Workflow Robustness:** Clean DFX restart (dfx stop, dfx start --clean, npm run dev) works reliably
-  - ✅ **Developer Experience:** No manual environment variable intervention required after restarts
+- ✅ **Environment Variable Persistence:** Robust variable management across DFX
+  restarts
+
+  - ✅ **Persistent Storage in dfx.json:** Environment variables stored in
+    dfx.json env section
+  - ✅ **Enhanced npm Script Workflow:** Proper sequencing (dfx:create →
+    update:env → dfx:deploy)
+  - ✅ **Runtime Environment Loading:** Scripts load variables from dfx.json
+    using jq with fallbacks
+  - ✅ **Mock Canister WASM Deployment:** Automatic deployment of WASM modules
+    for mock canisters
+  - ✅ **Complete Workflow Robustness:** Clean DFX restart (dfx stop, dfx start
+    --clean, npm run dev) works reliably
+  - ✅ **Developer Experience:** No manual environment variable intervention
+    required after restarts
 
 - ✅ **Production Readiness:** Deployment-ready configuration
   - ✅ Optimized production builds
@@ -204,6 +245,7 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ### Configuration Management
 
 - ✅ **Environment Variables:** Robust configuration system
+
   - ✅ Vite environment variable integration
   - ✅ Canister ID management
   - ✅ Network configuration (local/mainnet)
@@ -211,19 +253,25 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ Development vs production configurations
 
 - ✅ **Development Tooling:** Advanced developer experience improvements
-  - ✅ **Reliable Script-Based Workflow:** Complete automation of development tasks
+
+  - ✅ **Reliable Script-Based Workflow:** Complete automation of development
+    tasks
     - ✅ `npm run dfx:build` - Backend-only building with environment injection
-    - ✅ `npm run dfx:generate` - Candid interface generation with bug workarounds
-    - ✅ `npm run dfx:deploy` - Complete deployment with verification and env sync
+    - ✅ `npm run dfx:generate` - Candid interface generation with bug
+      workarounds
+    - ✅ `npm run dfx:deploy` - Complete deployment with verification and env
+      sync
     - ✅ `npm run update:env` - Dynamic environment variable synchronization
     - ✅ `npm run dev:setup` - One-command development environment setup
   - ✅ **DFX Bug Mitigation:** Comprehensive toolchain issue resolution
     - ✅ `candid-extractor` integration for complete interface extraction
     - ✅ Manual TypeScript binding generation bypassing `dfx generate` bugs
-    - ✅ Function verification system ensuring all backend methods are accessible
+    - ✅ Function verification system ensuring all backend methods are
+      accessible
     - ✅ Automatic fallback mechanisms for toolchain failures
 
 - ✅ **Troubleshooting & Debugging:** Developer-friendly debugging
+
   - ✅ Comprehensive error logging
   - ✅ Internet Identity configuration debugging
   - ✅ Environment variable debugging tools
@@ -231,24 +279,34 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
   - ✅ Build script debugging with detailed status reporting
   - ✅ Candid interface verification and missing function detection
 
-- ✅ **Error Management & Browser Extension Handling:** Advanced error filtering and classification system
-  - ✅ **Intelligent Error Classification:** Automatically distinguishes between application, extension, external, and network errors
-  - ✅ **Enhanced Error Boundaries:** Error boundaries that gracefully handle browser extension conflicts
-  - ✅ **Development Console Filtering:** Clean console output with error type classification (`[APPLICATION]`, `[EXTENSION]`, `[NETWORK]`)
-  - ✅ **Extension Error Suppression:** Browser extension errors (inject.js, ResizeObserver, etc.) filtered from production logs
-  - ✅ **User Experience Protection:** Extension errors don't trigger error boundary UI or disrupt user flows
-  - ✅ **Browser Extension Error Resolution:** Specific fix for inject.js async response errors from browser extensions
-  - ✅ **Development Experience Enhancement:** Clean, focused console output during development
+- ✅ **Error Management & Browser Extension Handling:** Advanced error filtering
+  and classification system
+  - ✅ **Intelligent Error Classification:** Automatically distinguishes between
+    application, extension, external, and network errors
+  - ✅ **Enhanced Error Boundaries:** Error boundaries that gracefully handle
+    browser extension conflicts
+  - ✅ **Development Console Filtering:** Clean console output with error type
+    classification (`[APPLICATION]`, `[EXTENSION]`, `[NETWORK]`)
+  - ✅ **Extension Error Suppression:** Browser extension errors (inject.js,
+    ResizeObserver, etc.) filtered from production logs
+  - ✅ **User Experience Protection:** Extension errors don't trigger error
+    boundary UI or disrupt user flows
+  - ✅ **Browser Extension Error Resolution:** Specific fix for inject.js async
+    response errors from browser extensions
+  - ✅ **Development Experience Enhancement:** Clean, focused console output
+    during development
 
 ## Security Features
 
 - ✅ **Authentication Security:** Secure user authentication
+
   - ✅ Internet Identity integration for passwordless auth
   - ✅ Principal-based identity management
   - ✅ Secure session handling
   - ✅ No credential storage on frontend
 
 - ✅ **Transaction Security:** Secure Bitcoin transactions
+
   - ✅ Principal validation for recipients
   - ✅ Amount validation and sanitization
   - ✅ Secure communication with ckTestBTC canister
@@ -264,88 +322,180 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 
 ### Problem Resolution
 
-- ✅ **Internet Identity Setup:** Complex local development setup with automated error resolution
+- ✅ **Internet Identity Setup:** Complex local development setup with automated
+  error resolution
+
   - ✅ Resolved canister deployment and configuration issues
   - ✅ Fixed environment variable loading problems
   - ✅ Corrected Vite configuration for proper env var access
   - ✅ Resolved frontend asset serving issues
   - ✅ Fixed canister lifecycle management
-  - ✅ **Internet Identity 503 Error Resolution:** Automatic detection and fix for empty canisters
-    - ✅ Identified root cause: canisters created but WASM module not installed (Module hash: None)
+  - ✅ **Internet Identity 503 Error Resolution:** Automatic detection and fix
+    for empty canisters
+    - ✅ Identified root cause: canisters created but WASM module not installed
+      (Module hash: None)
     - ✅ Implemented automatic WASM installation detection in setup scripts
     - ✅ Created intelligent canister status checking (Module hash verification)
     - ✅ Automated Internet Identity deployment when missing WASM detected
-    - ✅ Prevented future 503 canister errors through proactive WASM installation
+    - ✅ Prevented future 503 canister errors through proactive WASM
+      installation
 
-- ✅ **ckTestBTC Local Development:** Mainnet canister integration challenges with mock canister standardization
+- ✅ **ckTestBTC Local Development:** Mainnet canister integration challenges
+  with mock canister standardization
+
   - ✅ Resolved "Canister not found" errors in local development
   - ✅ Implemented smart environment detection (local vs mainnet)
-  - ✅ **Mock Canister Architecture Standardization:** Complete renaming and terminology clarification
-    - ✅ Renamed all mock canisters from `mock_ckbtc_*` to `mock_cktestbtc_*` for clarity
+  - ✅ **Mock Canister Architecture Standardization:** Complete renaming and
+    terminology clarification
+    - ✅ Renamed all mock canisters from `mock_ckbtc_*` to `mock_cktestbtc_*`
+      for clarity
     - ✅ Fixed BTC vs TestBTC terminology confusion throughout codebase
     - ✅ Added TestBTC-only safety headers to prevent mainnet Bitcoin confusion
     - ✅ Updated build scripts to reference correct mock canister names
-    - ✅ Ensured consistent naming: `mock_cktestbtc_ledger`, `mock_cktestbtc_minter`
+    - ✅ Ensured consistent naming: `mock_cktestbtc_ledger`,
+      `mock_cktestbtc_minter`
   - ✅ Created and deployed mock canisters for development testing
   - ✅ Fixed hardcoded canister ID references with dynamic canister management
-  - ✅ Resolved backend initialization race conditions preventing wallet operations
-  - ✅ Created mock functionality for local testing without external dependencies
+  - ✅ Resolved backend initialization race conditions preventing wallet
+    operations
+  - ✅ Created mock functionality for local testing without external
+    dependencies
   - ✅ Maintained production compatibility while enabling local development
 
 - ✅ **DFX Candid Generation Bug:** Critical toolchain issue resolution
-  - ✅ **Root Cause Analysis:** Confirmed DFX toolchain bug affecting Rust canister interface generation
-    - ✅ Researched and documented GitHub issues (#2665, #2969) in DFINITY SDK repository
+
+  - ✅ **Root Cause Analysis:** Confirmed DFX toolchain bug affecting Rust
+    canister interface generation
+    - ✅ Researched and documented GitHub issues (#2665, #2969) in DFINITY SDK
+      repository
     - ✅ Identified that `dfx generate` produces incomplete Candid interfaces
-    - ✅ Confirmed `candid-extractor` provides complete interface from same WASM file
+    - ✅ Confirmed `candid-extractor` provides complete interface from same WASM
+      file
     - ✅ Bug persists across DFX versions (0.28.0 → 0.29.1)
-  - ✅ **Comprehensive Solution Implementation:** Multi-layered approach to ensure reliable builds
+  - ✅ **Comprehensive Solution Implementation:** Multi-layered approach to
+    ensure reliable builds
     - ✅ `candid-extractor` integration for complete WASM interface extraction
-    - ✅ Manual TypeScript binding generation with all functions (`faucet`, `get_btc_address`, `get_balance`, `transfer`, `get_principal`)
-    - ✅ Verification system detecting missing functions and triggering workarounds
-    - ✅ Complete bypass of buggy `dfx generate` command while maintaining compatibility
-    - ✅ Preservation of complete Candid interface (including `TextResult` type) throughout build process
+    - ✅ Manual TypeScript binding generation with all functions (`faucet`,
+      `get_btc_address`, `get_balance`, `transfer`, `get_principal`)
+    - ✅ Verification system detecting missing functions and triggering
+      workarounds
+    - ✅ Complete bypass of buggy `dfx generate` command while maintaining
+      compatibility
+    - ✅ Preservation of complete Candid interface (including `TextResult` type)
+      throughout build process
   - ✅ **Community Research:** Thorough investigation of reported issues
-    - ✅ Documented existence of `candid-extractor` as community response to DFX limitations
+    - ✅ Documented existence of `candid-extractor` as community response to DFX
+      limitations
     - ✅ Identified known issues in DFINITY forum discussions
-    - ✅ Confirmed alignment with community best practices for this toolchain bug
+    - ✅ Confirmed alignment with community best practices for this toolchain
+      bug
 
 - ✅ **Frontend Build System:** Modern toolchain integration
+
   - ✅ Vite configuration for IC canister development
   - ✅ TypeScript integration with IC types
   - ✅ Environment variable management across build stages
   - ✅ Asset canister integration with development server
 
-- ✅ **Environment Variable Persistence Issue:** Critical development workflow stability problem
-  - ✅ **Problem Solved:** Backend canister environment variables (LOCAL_MOCK_LEDGER_CANISTER_ID) not persisting after DFX restarts
-  - ✅ **Root Cause Analysis:** Rust option_env!() reads compile-time variables, shell sessions don't persist across builds
-  - ✅ **Solution:** Persistent storage in dfx.json with enhanced script workflow and mock canister WASM deployment
-  - ✅ **Impact:** Developers can now restart entire stack without manual environment variable intervention
-  - ✅ **Files Enhanced:** update-env.sh, build-backend.sh, deploy-backend.sh, setup-canisters.sh
-  - ✅ **Testing:** Complete workflow verified with clean DFX restart and successful variable persistence
+- ✅ **Environment Variable Persistence Issue:** Critical development workflow
+  stability problem
 
-- ✅ **Browser Extension Error Resolution:** Complex browser extension conflict resolution
+  - ✅ **Problem Solved:** Backend canister environment variables
+    (LOCAL_MOCK_LEDGER_CANISTER_ID) not persisting after DFX restarts
+  - ✅ **Root Cause Analysis:** Rust option_env!() reads compile-time variables,
+    shell sessions don't persist across builds
+  - ✅ **Solution:** Persistent storage in dfx.json with enhanced script
+    workflow and mock canister WASM deployment
+  - ✅ **Impact:** Developers can now restart entire stack without manual
+    environment variable intervention
+  - ✅ **Files Enhanced:** update-env.sh, build-backend.sh, deploy-backend.sh,
+    setup-canisters.sh
+  - ✅ **Testing:** Complete workflow verified with clean DFX restart and
+    successful variable persistence
+
+- ✅ **Browser Extension Error Resolution:** Complex browser extension conflict
+  resolution
+
   - ✅ Resolved inject.js async response errors from browser extensions
-  - ✅ Implemented intelligent error classification system based on gifty-crypto platform solution
-  - ✅ Created comprehensive error filtering for extension, external, and network errors
-  - ✅ Maintained clean development console while preserving important application errors
-  - ✅ Prevented browser extension errors from affecting user experience or error boundaries
+  - ✅ Implemented intelligent error classification system based on gifty-crypto
+    platform solution
+  - ✅ Created comprehensive error filtering for extension, external, and
+    network errors
+  - ✅ Maintained clean development console while preserving important
+    application errors
+  - ✅ Prevented browser extension errors from affecting user experience or
+    error boundaries
 
-- ✅ **UI Display Bug Resolution:** Double conversion error in balance formatting
-  - ✅ **Root Cause Analysis:** Multiple components performing redundant satoshi-to-ckTestBTC conversion
-    - ✅ Identified service layer correctly converting 100,000,000 satoshis → "1.00000000" ckTestBTC
-    - ✅ Found UI components incorrectly re-dividing by 100,000,000 → "0.00000001" display
-    - ✅ Traced bug across TokenBalance, deposits-withdrawals-tab, and transaction-item components
-  - ✅ **Solution Implementation:** Standardized formatting architecture
+- ✅ **UI Display Bug Resolution:** Double conversion error in balance
+  formatting
+
+  - ✅ **Root Cause Analysis:** Multiple components performing redundant
+    satoshi-to-ckTestBTC conversion
+    - ✅ Identified service layer correctly converting 100,000,000 satoshis →
+      "1.00000000" ckTestBTC
+    - ✅ Found UI components incorrectly re-dividing by 100,000,000 →
+      "0.00000001" display
+    - ✅ Traced bug across TokenBalance, deposits-withdrawals-tab,
+      transaction-item, and send-modal components
+  - ✅ **Solution Implementation:** Standardized formatting architecture with
+    shared utilities
+    - ✅ Created shared balance formatting utilities
+      (`src/frontend/src/lib/utils/balance-formatting/`)
+    - ✅ Implemented `formatBalance`, `formatAmount`, and `formatTokenBalance`
+      functions
     - ✅ Service layer handles all satoshi-to-ckTestBTC conversion once
-    - ✅ UI components display pre-formatted values without additional conversion
-    - ✅ Fixed formatBalance functions in shared components and tab-specific components
+    - ✅ UI components use shared formatters without additional conversion
+    - ✅ Fixed double conversion bug in all affected components:
+      - ✅ `TokenBalance` component
+      - ✅ `deposits-withdrawals-tab` component
+      - ✅ `transaction-item` component
+      - ✅ `send-modal` component
     - ✅ Maintained 8-decimal precision display format consistency
-  - ✅ **Impact:** Corrected balance display from 0.00000001 to proper 1.00000000 ckTestBTC values
-  - ✅ **Architecture Improvement:** Established single-point-of-conversion principle for token display
+    - ✅ Established single shared codebase for all balance calculations
+  - ✅ **Impact:** Corrected balance display from 0.00000001 to proper
+    1.00000000 ckTestBTC values
+  - ✅ **Architecture Improvement:** Established single-point-of-conversion
+    principle with reusable utilities
+
+- ✅ **Principal Validation Enhancement:** Improved Internet Computer Principal
+  ID validation
+
+  - ✅ **Problem Analysis:** Send modal used basic regex validation that failed
+    to properly validate Principal IDs
+    - ✅ Identified regex patterns were too simplistic for complex Principal ID
+      formats
+    - ✅ Users couldn't send transactions due to false validation failures
+  - ✅ **Solution Implementation:** Proper Principal validation using
+    @dfinity/principal
+    - ✅ Created shared principal validation utilities
+      (`src/frontend/src/lib/utils/principal-validation/`)
+    - ✅ Implemented `validatePrincipal`, `validatePrincipalWithDetails`, and
+      helper functions
+    - ✅ Replaced regex-based validation with `Principal.fromText()` method
+    - ✅ Updated send modal to use shared validation utilities
+    - ✅ Established reusable principal validation across components
+  - ✅ **Impact:** Send modal now properly validates all valid Internet Computer
+    Principal IDs
+  - ✅ **Architecture Improvement:** Centralized principal validation logic with
+    comprehensive error handling
+
+- ✅ **Development Environment Cleanup:** Removed debug console logging
+  - ✅ **Console Log Cleanup:** Removed all troubleshooting debug logs from
+    production code
+    - ✅ Cleaned up wallet service debug logs (balance and faucet operations)
+    - ✅ Removed useBackend hook initialization logs
+    - ✅ Cleaned up useAuth authentication flow debug logs
+    - ✅ Removed transaction history debug logging
+    - ✅ Cleaned up transaction service debug output
+    - ✅ Removed App component rendering debug logs
+  - ✅ **Impact:** Clean development console without performance-affecting debug
+    noise
+  - ✅ **Benefit:** Improved developer experience and production performance
 
 ### Architecture Decisions
 
 - ✅ **Separation of Concerns:** Clean architecture implementation
+
   - ✅ Backend canister handles all blockchain interactions
   - ✅ Frontend focuses purely on user interface
   - ✅ Clear API boundaries between canisters
@@ -361,35 +511,46 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 
 ## Current Limitations
 
-- 🤔 **Mainnet Deployment:** Ready for mainnet but currently configured for local development
-- ✅ **Transaction History:** Complete persistent transaction history implemented
+- 🤔 **Mainnet Deployment:** Ready for mainnet but currently configured for
+  local development
+- ✅ **Transaction History:** Complete persistent transaction history
+  implemented
 - 🤔 **Multi-Asset Support:** Only ckTestBTC currently supported
 - 🤔 **Mobile Optimization:** Desktop-first design
-- 🤔 **Local Development Constraints:** Mock data only, no real blockchain interactions in local mode
+- 🤔 **Local Development Constraints:** Mock data only, no real blockchain
+  interactions in local mode
 - ✅ **DFX Toolchain Limitations:** Resolved through comprehensive workarounds
+
   - ✅ **DFX 0.29.1 Declaration Generation:** Proper protocol implementation
-    - ✅ Replaced manual hardcoded TypeScript interfaces with scalable auto-extraction
+    - ✅ Replaced manual hardcoded TypeScript interfaces with scalable
+      auto-extraction
     - ✅ Updated script to use `candid-extractor` + `dfx generate` workflow
-    - ✅ Complete TypeScript declarations with all backend functions properly exported
+    - ✅ Complete TypeScript declarations with all backend functions properly
+      exported
     - ✅ Auto-scales as new functions are added without script updates
   - ✅ All backend functions accessible in frontend with proper type safety
   - ✅ Reliable build process independent of DFX version bugs
 
 - ✅ **Frontend Architecture Compliance:** Functional-only codebase alignment
   - ✅ **Hook Directory Structure:** Refactored to follow project standards
-    - ✅ All hooks moved from direct `.ts` files to directory-per-module structure
-    - ✅ Kebab-case naming convention: `use-auth/index.ts`, `use-wallet/index.ts`, etc.
+    - ✅ All hooks moved from direct `.ts` files to directory-per-module
+      structure
+    - ✅ Kebab-case naming convention: `use-auth/index.ts`,
+      `use-wallet/index.ts`, etc.
     - ✅ Updated all imports throughout codebase to use new directory structure
-  - ✅ **Service Layer Architecture:** Maintained class-based services for state management
+  - ✅ **Service Layer Architecture:** Maintained class-based services for state
+    management
     - ✅ Services provide singleton pattern for backend actor management
-    - ✅ Clear separation between functional React components and stateful services
+    - ✅ Clear separation between functional React components and stateful
+      services
     - ✅ Type-safe integration with auto-generated backend declarations
 
 ## Future Considerations
 
 ### Enhanced Features
 
-- ✅ **Transaction History:** Persistent transaction logging and display (COMPLETED)
+- ✅ **Transaction History:** Persistent transaction logging and display
+  (COMPLETED)
 - 🤔 **QR Code Support:** QR code generation for receiving addresses
 - 🤔 **Address Book:** Save frequently used recipient addresses
 - 🤔 **Multi-Asset Wallet:** Support for additional cryptocurrencies
@@ -422,13 +583,16 @@ work completed on this Internet Computer-based Bitcoin testnet wallet applicatio
 ## Documentation
 
 - ✅ **CLAUDE.md:** Comprehensive development guide
-- ✅ **FEATURES.md:** Complete feature implementation tracking with DFX bug documentation
+- ✅ **FEATURES.md:** Complete feature implementation tracking with DFX bug
+  documentation
 - ✅ **Project Structure:** Clear codebase organization
 - ✅ **Configuration Files:** Well-documented dfx.json, vite.config.ts
 - ✅ **Environment Setup:** Step-by-step development setup
 - ✅ **API Documentation:** Candid interface definitions
-- ✅ **Build Scripts Documentation:** Comprehensive script usage and DFX workaround explanations
-- ✅ **Troubleshooting Guides:** DFX Candid generation bug resolution and community research findings
+- ✅ **Build Scripts Documentation:** Comprehensive script usage and DFX
+  workaround explanations
+- ✅ **Troubleshooting Guides:** DFX Candid generation bug resolution and
+  community research findings
 
 ---
 

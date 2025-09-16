@@ -17,7 +17,7 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react';
-import { cn } from '@/lib';
+import { cn, formatBalance } from '@/lib';
 
 interface DepositsWithdrawalsTabProps {
   loading: boolean;
@@ -78,11 +78,6 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
     }
   };
 
-  const formatBalance = (balance: string) => {
-    // Balance is already formatted by the service layer
-    const numBalance = parseFloat(balance);
-    return numBalance.toFixed(8);
-  };
 
   return (
     <div className="space-y-6">
