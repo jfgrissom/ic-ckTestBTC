@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
-  depositWithdrawalService,
   getDepositAddress,
   withdrawTestBTC,
   validateTestBTCAddress,
   formatCkTestBTCAmount,
-  parseCkTestBTCAmount
+  parseCkTestBTCAmount,
+  isValidWithdrawalAmount,
+  getMinimumWithdrawalAmount,
 } from '@/services/deposit-withdrawal.service';
-import { useBackend } from '@/hooks/use-backend';
 
 interface UseDepositWithdrawalReturn {
   loading: boolean;
@@ -24,15 +24,6 @@ interface UseDepositWithdrawalReturn {
 export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { backend: backendActor } = useBackend();
-
-  // Set backend actor when available
-  useEffect(() => {
-    if (backendActor) {
-      depositWithdrawalService.setBackendActor(backendActor);
-    }
-  }, [backendActor]);
 
   const handleGetDepositAddress = async (): Promise<{ success: boolean; address?: string; error?: string }> => {
     setLoading(true);
@@ -71,7 +62,6 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
     setError(null);
 
     try {
-      // Validate address first
       const addressValidation = validateTestBTCAddress(address);
       if (!addressValidation.valid) {
         setError(addressValidation.error || 'Invalid address');
@@ -81,7 +71,6 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
         };
       }
 
-      // Parse amount to satoshis
       const amountInSatoshis = parseCkTestBTCAmount(amount);
       const result = await withdrawTestBTC(address, amountInSatoshis);
 
@@ -115,7 +104,7 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
   };
 
   const validateAmount = (amount: string, balance: string): { valid: boolean; error?: string } => {
-    return depositWithdrawalService.isValidWithdrawalAmount(amount, balance);
+    return isValidWithdrawalAmount(amount, balance);
   };
 
   const formatAmount = (amount: string): string => {
@@ -127,7 +116,7 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
   };
 
   const getMinimumAmount = (): string => {
-    return depositWithdrawalService.getMinimumWithdrawalAmount();
+    return getMinimumWithdrawalAmount();
   };
 
   return {

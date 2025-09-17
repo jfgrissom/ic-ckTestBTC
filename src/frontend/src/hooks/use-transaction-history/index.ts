@@ -1,6 +1,14 @@
-import { useState, useEffect } from 'react';
-import { transactionService, getTransactionHistory } from '@/services/transaction.service';
-import { Transaction } from '@/components/shared/transaction-item';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  getTransactionHistory,
+  filterByType as filterByTypeService,
+  filterByToken as filterByTokenService,
+  filterByStatus as filterByStatusService,
+  searchTransactions as searchTransactionsService,
+  getRecentTransactions as getRecentTransactionsService,
+  getTransactionStats,
+  Transaction,
+} from '@/services/transaction.service';
 import { useBackend } from '@/hooks/use-backend';
 
 interface UseTransactionHistoryReturn {
@@ -23,16 +31,7 @@ export const useTransactionHistory = (): UseTransactionHistoryReturn => {
 
   const { backend: backendActor } = useBackend();
 
-
-  // Set backend actor when available
-  useEffect(() => {
-    if (backendActor) {
-      transactionService.setBackendActor(backendActor);
-    }
-  }, [backendActor]);
-
   const refreshTransactions = async (): Promise<void> => {
-    // Check global backend service instead of React hook state
     const { getBackend } = await import('@/services/backend.service');
     const globalBackend = getBackend();
 
@@ -61,35 +60,28 @@ export const useTransactionHistory = (): UseTransactionHistoryReturn => {
     }
   };
 
-  // Filter transactions by type
   const filterByType = (type: string): Transaction[] => {
-    return transactionService.filterByType(transactions, type);
+    return filterByTypeService(transactions, type);
   };
 
-  // Filter transactions by token
   const filterByToken = (token: string): Transaction[] => {
-    return transactionService.filterByToken(transactions, token);
+    return filterByTokenService(transactions, token);
   };
 
-  // Filter transactions by status
   const filterByStatus = (status: string): Transaction[] => {
-    return transactionService.filterByStatus(transactions, status);
+    return filterByStatusService(transactions, status);
   };
 
-  // Search transactions
   const searchTransactions = (query: string): Transaction[] => {
-    return transactionService.searchTransactions(transactions, query);
+    return searchTransactionsService(transactions, query);
   };
 
-  // Get recent transactions for send/receive tab
   const getRecentTransactions = (limit: number = 5): Transaction[] => {
-    return transactionService.getRecentTransactions(transactions, limit);
+    return getRecentTransactionsService(transactions, limit);
   };
 
-  // Calculate transaction statistics
-  const stats = transactionService.getTransactionStats(transactions);
+  const stats = useMemo(() => getTransactionStats(transactions), [transactions]);
 
-  // Load transactions when backend becomes available
   useEffect(() => {
     if (backendActor) {
       refreshTransactions();

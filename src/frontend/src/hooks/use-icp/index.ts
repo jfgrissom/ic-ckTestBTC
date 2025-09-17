@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { icpService, getICPBalance, transferICP, formatICPBalance, parseICPAmount } from '@/services/icp.service';
+import { getICPBalance, transferICP, formatICPBalance, parseICPAmount } from '@/services/icp.service';
 import { useBackend } from '@/hooks/use-backend';
 
 interface UseICPReturn {
@@ -18,13 +18,6 @@ export const useICP = (): UseICPReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const { backend: backendActor } = useBackend();
-
-  // Set backend actor when available
-  useEffect(() => {
-    if (backendActor) {
-      icpService.setBackendActor(backendActor);
-    }
-  }, [backendActor]);
 
   const refreshBalance = async (): Promise<void> => {
     if (!backendActor) {
@@ -50,7 +43,7 @@ export const useICP = (): UseICPReturn => {
     }
   };
 
-  const transfer = async (to: string, amount: string): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
+  const handleTransfer = async (to: string, amount: string): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
     if (!backendActor) {
       return { success: false, error: 'Backend not initialized' };
     }
@@ -59,12 +52,10 @@ export const useICP = (): UseICPReturn => {
     setError(null);
 
     try {
-      // Parse amount to e8s (smallest ICP unit)
       const amountInE8s = parseICPAmount(amount);
       const result = await transferICP(to, amountInE8s);
 
       if (result.success) {
-        // Refresh balance after successful transfer
         await refreshBalance();
         return {
           success: true,
@@ -89,7 +80,6 @@ export const useICP = (): UseICPReturn => {
     }
   };
 
-  // Load balance when backend becomes available
   useEffect(() => {
     if (backendActor) {
       refreshBalance();
@@ -101,7 +91,7 @@ export const useICP = (): UseICPReturn => {
     loading,
     error,
     refreshBalance,
-    transfer,
+    transfer: handleTransfer,
     formatBalance: formatICPBalance,
     parseAmount: parseICPAmount,
   };
