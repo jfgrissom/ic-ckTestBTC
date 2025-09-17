@@ -148,6 +148,11 @@ The frontend follows a **functional component architecture** with clear separati
 - Business logic calculations
 - Data transformation logic
 - Complex state management
+- Validation logic (beyond simple UI validation like "field not empty")
+- Amount calculations or conversions
+- Filtering, sorting, or pagination logic
+- Async operation orchestration
+- Data fetching with useEffect
 
 ### Separation of Concerns
 
@@ -185,6 +190,115 @@ const BalanceDisplay = () => {
   const { data: balance } = useBalance();
   return <div>{balance}</div>;
 };
+```
+
+### Common Architecture Violations to Avoid
+
+#### ❌ VIOLATION: Transaction Filtering in Component
+```typescript
+// BAD - Component contains business logic
+const TransactionList = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  // WRONG - Business logic in component
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter(tx => tx.type === filter || filter === 'all')
+      .filter(tx => tx.description.includes(searchTerm))
+      .sort((a, b) => b.date - a.date);
+  }, [transactions, filter, searchTerm]);
+
+  // WRONG - Pagination logic in component
+  const paginatedTransactions = useMemo(() => {
+    return filteredTransactions.slice(page * pageSize, (page + 1) * pageSize);
+  }, [filteredTransactions, page, pageSize]);
+}
+
+// GOOD - All logic in hook
+const TransactionList = () => {
+  const {
+    transactions,
+    searchTerm,
+    setSearchTerm,
+    filter,
+    setFilter,
+    page,
+    setPage
+  } = useTransactionHistory();
+
+  // Component only renders, no logic
+  return <div>...</div>;
+}
+```
+
+#### ❌ VIOLATION: Validation Logic in Modal Component
+```typescript
+// BAD - Modal contains validation
+const SendModal = () => {
+  // WRONG - Validation in component
+  const validateInputs = () => {
+    if (!isValidPrincipal(recipient)) {
+      setError('Invalid Principal ID');
+      return false;
+    }
+    if (parseFloat(amount) > balance) {
+      setError('Insufficient balance');
+      return false;
+    }
+    return true;
+  };
+
+  // WRONG - Amount calculation in component
+  const handleMaxClick = () => {
+    const maxAmount = balance - estimatedFee;
+    setAmount(maxAmount.toString());
+  };
+}
+
+// GOOD - Validation in hook
+const SendModal = () => {
+  const {
+    validate,
+    setMaxAmount,
+    errors
+  } = useWallet();
+
+  return (
+    <Modal>
+      <button onClick={setMaxAmount}>Max</button>
+      {errors.recipient && <span>{errors.recipient}</span>}
+    </Modal>
+  );
+}
+```
+
+#### ❌ VIOLATION: Async Operations in Component
+```typescript
+// BAD - Component manages async state
+const DepositModal = () => {
+  const [address, setAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // WRONG - Async orchestration in component
+  useEffect(() => {
+    setLoading(true);
+    fetchDepositAddress()
+      .then(addr => setAddress(addr))
+      .finally(() => setLoading(false));
+  }, []);
+}
+
+// GOOD - Hook manages async state
+const DepositModal = () => {
+  const { depositAddress, loading } = useDepositWithdrawal();
+
+  return (
+    <Modal>
+      {loading ? 'Loading...' : depositAddress}
+    </Modal>
+  );
+}
 ```
 
 ### Reusability Patterns
@@ -468,6 +582,27 @@ import { setupErrorFiltering, cn } from '@/lib'
 
 This convention applies to all utility modules in the frontend codebase.
 
+## Architecture Violation Severity Levels
+
+### 🔴 SEVERE Violations (Must Fix Immediately)
+- Components containing data filtering, sorting, or pagination logic
+- Components with complex state management using multiple useState/useMemo
+- Business logic calculations directly in component render methods
+
+### 🟠 HIGH Violations (Fix Before Merge)
+- Validation logic beyond simple "field not empty" checks
+- Amount calculations or data transformations in components
+- Components that re-implement utility functions locally
+
+### 🟡 MODERATE Violations (Fix in Next Iteration)
+- Components managing async operation states (loading, error)
+- Direct useEffect for data fetching instead of using hooks
+- Components orchestrating multiple service calls
+
+### 🟢 MINOR Violations (Code Review Note)
+- Not using shared utilities from @/lib
+- Duplicating formatters or helpers across components
+
 ## Enforcement
 
 **BLOCKING**: No pull request will be accepted that contains:
@@ -475,6 +610,18 @@ This convention applies to all utility modules in the frontend codebase.
 - Direct file paths that could use aliases
 - Class-based service implementations
 - Services not following functional module patterns
-- Components with embedded business logic
+- **Components with embedded business logic (SEVERE/HIGH violations)**
+- **Components performing data transformations or calculations**
+- **Components containing validation beyond UI-level checks**
+- **Components with filtering, sorting, or pagination logic**
+
+### Code Review Checklist for Components
+- [ ] Component only handles UI rendering and user interactions
+- [ ] All business logic is delegated to hooks
+- [ ] No data transformations in the component
+- [ ] No validation logic beyond simple UI validation
+- [ ] Uses shared utilities from @/lib
+- [ ] Async operations managed by hooks, not component
+- [ ] No complex state management with multiple useState/useMemo
 
 This structure ensures consistency, maintainability, and scalability across the entire frontend codebase.
