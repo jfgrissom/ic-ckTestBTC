@@ -1,4 +1,5 @@
 import { BackendActor } from '@/types/backend.types';
+import { getBackend } from './backend.service';
 
 interface DepositWithdrawalResult {
   success: boolean;
@@ -15,13 +16,17 @@ class DepositWithdrawalService {
   }
 
   async getDepositAddress(): Promise<DepositWithdrawalResult> {
-    if (!this.backendActor) {
+    // Try to get backend from service if not set
+    const backend = this.backendActor || getBackend();
+    console.log('[Deposit Service] Getting deposit address, backend:', backend ? 'available' : 'not available');
+
+    if (!backend) {
       return { success: false, error: 'Backend not initialized' };
     }
 
     try {
       // Check if the method exists in the backend
-      if (!('get_deposit_address' in this.backendActor)) {
+      if (!('get_deposit_address' in backend)) {
         console.warn('get_deposit_address method not implemented in backend');
         return {
           success: false,
@@ -29,7 +34,7 @@ class DepositWithdrawalService {
         };
       }
 
-      const result = await (this.backendActor as any).get_deposit_address();
+      const result = await (backend as any).get_deposit_address();
 
       if ('Ok' in result) {
         return {
@@ -52,13 +57,16 @@ class DepositWithdrawalService {
   }
 
   async withdrawTestBTC(address: string, amount: string): Promise<DepositWithdrawalResult> {
-    if (!this.backendActor) {
+    // Try to get backend from service if not set
+    const backend = this.backendActor || getBackend();
+
+    if (!backend) {
       return { success: false, error: 'Backend not initialized' };
     }
 
     try {
       // Check if the method exists in the backend
-      if (!('withdraw_testbtc' in this.backendActor)) {
+      if (!('withdraw_testbtc' in backend)) {
         console.warn('withdraw_testbtc method not implemented in backend');
         return {
           success: false,
@@ -67,7 +75,7 @@ class DepositWithdrawalService {
       }
 
       const amountBigInt = BigInt(amount);
-      const result = await (this.backendActor as any).withdraw_testbtc(address, amountBigInt);
+      const result = await (backend as any).withdraw_testbtc(address, amountBigInt);
 
       if ('Ok' in result) {
         return {

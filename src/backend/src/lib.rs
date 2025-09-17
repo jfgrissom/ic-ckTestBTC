@@ -522,4 +522,162 @@ fn get_transaction(id: u64) -> Option<Transaction> {
     })
 }
 
+// Transfer ckTestBTC tokens
+#[update]
+async fn transfer(to_principal: Principal, amount: Nat) -> Result<Nat, String> {
+    let from_principal = caller();
+
+    ic_cdk::println!("[TRANSFER] Called by principal: {}", from_principal);
+    ic_cdk::println!("[TRANSFER] Transferring {} to {}", amount, to_principal);
+
+    // Create transfer arguments with proper user principal
+    let transfer_args = TransferArgs {
+        from_subaccount: None,
+        to: Account {
+            owner: to_principal,
+            subaccount: None,
+        },
+        amount: amount.clone(),
+        fee: Some(Nat::from(10u64)), // 10 satoshi fee
+        memo: None,
+        created_at_time: Some(ic_cdk::api::time()),
+    };
+
+    let token_canister = get_token_canister()?;
+    ic_cdk::println!("[TRANSFER] Token canister: {}", token_canister);
+
+    // Create the from account using the caller's principal (not the canister's)
+    let from_account = Account {
+        owner: from_principal,
+        subaccount: None,
+    };
+
+    // First check the balance
+    let balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (from_account.clone(),)
+    ).await;
+
+    match balance_result {
+        Ok((balance,)) => {
+            ic_cdk::println!("[TRANSFER] User balance: {}", balance);
+
+            // Check if user has sufficient balance (amount + fee)
+            let required = amount.clone() + Nat::from(10u64);
+            if balance < required {
+                store_transaction(
+                    TransactionType::Send,
+                    "ckTestBTC".to_string(),
+                    amount.clone(),
+                    from_principal.to_text(),
+                    to_principal.to_text(),
+                    TransactionStatus::Failed,
+                    None,
+                );
+                return Err(format!("Insufficient balance. Required: {}, Available: {}", required, balance));
+            }
+        }
+        Err(e) => {
+            return Err(format!("Failed to check balance: {:?}", e));
+        }
+    }
+
+    // Now perform the transfer using icrc1_transfer
+    // This will use the caller's principal for the transfer
+    let result: CallResult<(Result<Nat, TransferError>,)> = ic_cdk::call(
+        token_canister,
+        "icrc1_transfer",
+        (transfer_args,)
+    ).await;
+
+    match result {
+        Ok((Ok(block_index),)) => {
+            ic_cdk::println!("[TRANSFER] Transfer successful, block index: {}", block_index);
+
+            // Store successful transaction
+            store_transaction(
+                TransactionType::Send,
+                "ckTestBTC".to_string(),
+                amount.clone(),
+                from_principal.to_text(),
+                to_principal.to_text(),
+                TransactionStatus::Confirmed,
+                Some(block_index.clone()),
+            );
+
+            // Also store the receive transaction for the recipient
+            store_transaction(
+                TransactionType::Receive,
+                "ckTestBTC".to_string(),
+                amount,
+                from_principal.to_text(),
+                to_principal.to_text(),
+                TransactionStatus::Confirmed,
+                Some(block_index.clone()),
+            );
+
+            Ok(block_index)
+        }
+        Ok((Err(err),)) => {
+            let error_msg = format_transfer_error(&err);
+            ic_cdk::println!("[TRANSFER] Transfer failed: {}", error_msg);
+
+            // Store failed transaction
+            store_transaction(
+                TransactionType::Send,
+                "ckTestBTC".to_string(),
+                amount.clone(),
+                from_principal.to_text(),
+                to_principal.to_text(),
+                TransactionStatus::Failed,
+                None,
+            );
+
+            Err(error_msg)
+        }
+        Err(e) => {
+            ic_cdk::println!("[TRANSFER] Call failed: {:?}", e);
+
+            store_transaction(
+                TransactionType::Send,
+                "ckTestBTC".to_string(),
+                amount,
+                from_principal.to_text(),
+                to_principal.to_text(),
+                TransactionStatus::Failed,
+                None,
+            );
+
+            Err(format!("Call failed: {:?}", e))
+        }
+    }
+}
+
+// Helper function to format transfer errors
+fn format_transfer_error(error: &TransferError) -> String {
+    match error {
+        TransferError::BadFee { expected_fee } => {
+            format!("Bad fee. Expected: {} satoshis", expected_fee)
+        }
+        TransferError::InsufficientFunds { balance } => {
+            format!("Insufficient funds. Balance: {} satoshis", balance)
+        }
+        TransferError::TooOld => "Transaction too old".to_string(),
+        TransferError::CreatedInFuture { ledger_time } => {
+            format!("Transaction created in future. Ledger time: {}", ledger_time)
+        }
+        TransferError::Duplicate { duplicate_of } => {
+            format!("Duplicate transaction. Original block: {}", duplicate_of)
+        }
+        TransferError::TemporarilyUnavailable => "Service temporarily unavailable".to_string(),
+        TransferError::GenericError { error_code, message } => {
+            format!("Error {}: {}", error_code, message)
+        }
+        TransferError::BadBurn { min_burn_amount } => {
+            format!("Bad burn amount. Minimum: {} satoshis", min_burn_amount)
+        }
+    }
+}
+
 ic_cdk::export_candid!();

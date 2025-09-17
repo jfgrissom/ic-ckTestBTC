@@ -35,10 +35,6 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
   }, [backendActor]);
 
   const handleGetDepositAddress = async (): Promise<{ success: boolean; address?: string; error?: string }> => {
-    if (!backendActor) {
-      return { success: false, error: 'Backend not initialized' };
-    }
-
     setLoading(true);
     setError(null);
 
@@ -71,10 +67,6 @@ export const useDepositWithdrawal = (): UseDepositWithdrawalReturn => {
   };
 
   const handleWithdrawTestBTC = async (address: string, amount: string): Promise<{ success: boolean; message?: string; error?: string }> => {
-    if (!backendActor) {
-      return { success: false, error: 'Backend not initialized' };
-    }
-
     setLoading(true);
     setError(null);
 

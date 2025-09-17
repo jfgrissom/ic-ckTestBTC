@@ -2,7 +2,6 @@ import { Principal } from '@dfinity/principal';
 import { getBackend, refreshBackend } from './backend.service';
 import { getAuthClient } from './auth.service';
 import { getNetworkConfig } from '@/types/backend.types';
-import { transferViaLedger } from './ledger.service';
 
 /**
  * Get wallet balance
@@ -57,40 +56,28 @@ export const transfer = async (
   recipientPrincipal: string,
   amount: string // Amount is already in satoshis from the send modal
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
+  const backend = getBackend();
+  if (!backend) {
+    return { success: false, error: 'Backend service not available' };
+  }
+
   try {
     const toPrincipal = Principal.fromText(recipientPrincipal);
 
-    // Convert satoshis back to ckTestBTC for the ledger service
-    const amountInCkTestBTC = (Number(amount) / 100000000).toFixed(8);
-
-    console.log('[Wallet Service] Initiating direct ledger transfer:', {
+    console.log('[Wallet Service] Initiating backend proxy transfer:', {
       recipient: recipientPrincipal,
-      amountSatoshis: amount,
-      amountCkTestBTC: amountInCkTestBTC
+      amountSatoshis: amount
     });
 
-    // Use direct ledger transfer
-    const result = await transferViaLedger(toPrincipal, amountInCkTestBTC);
+    // Use backend proxy for transfer - backend handles transaction history
+    const result = await backend.transfer(toPrincipal, BigInt(amount));
 
-    if (result.success) {
-      console.log('[Wallet Service] Transfer successful via ledger, block index:', result.blockIndex);
+    console.log('[Wallet Service] Transfer successful via backend, block index:', result.toString());
 
-      // Store transaction in backend for history tracking
-      try {
-        const backend = getBackend();
-        if (backend) {
-          // Note: We might want to add a backend method to record external transfers
-          console.log('[Wallet Service] Transaction recorded in backend history');
-        }
-      } catch (err) {
-        console.warn('[Wallet Service] Could not record transaction in backend:', err);
-      }
-
-      return { success: true, blockIndex: result.blockIndex };
-    } else {
-      console.error('[Wallet Service] Transfer failed:', result.error);
-      return { success: false, error: result.error };
-    }
+    return {
+      success: true,
+      blockIndex: result.toString()
+    };
   } catch (error: any) {
     console.error('[Wallet Service] Transfer error:', error);
     return { success: false, error: error.message || 'Transfer failed' };
