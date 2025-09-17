@@ -90,6 +90,49 @@ src/components/
     └── types.ts
 ```
 
+## Frontend Architecture (Modular Design)
+
+### Component Architecture
+The frontend follows a **functional component architecture** with clear separation of concerns:
+
+**Key Principles:**
+- **Functional Components Only**: No class-based components - all React components use functional syntax with hooks
+- **Custom Hooks**: Business logic encapsulated in reusable hooks (`useAuth`, `useWallet`, `useBackend`)
+- **Service Layer**: Backend communication and business logic separated into service modules
+- **Type Safety**: Comprehensive TypeScript interfaces for all data structures
+- **Component Composition**: Small, focused components that compose into larger features
+
+### Layer Responsibilities
+
+1. **Components (`src/components/`)**
+   - Pure UI rendering and user interaction
+   - Receive data and callbacks as props
+   - No direct backend communication or business logic
+   - Component-specific CSS modules for styling
+
+2. **Hooks (`src/hooks/`)**
+   - State management and side effects
+   - Orchestrate service layer calls
+   - Provide clean APIs to components
+   - Handle React lifecycle events
+
+3. **Services (`src/services/`)**
+   - Backend communication logic
+   - Business logic implementation
+   - **Stateless function modules with shared closure state**
+   - Error handling and data transformation
+
+4. **Types (`src/types/`)**
+   - TypeScript interface definitions
+   - Network configuration utilities
+   - Prop and state type definitions
+   - Ensure type safety across layers
+
+### Error Handling
+- **Browser Extension Error Filtering**: Intelligent error classification system that filters out extension-related errors while preserving application errors
+- **User-Friendly Error Reporting**: Clean error boundaries that don't break on external script issues
+- **Development Console Filtering**: Clean development experience with error type classification
+
 ## Modular Architecture Principles
 
 ### Component Responsibilities
@@ -155,6 +198,7 @@ const BalanceDisplay = () => {
    - API communication
    - Data transformation
    - External integrations
+   - Functional modules, NOT classes
 
 3. **Utility Functions** (`src/lib/utils/`):
    - Pure functions for formatting
@@ -165,6 +209,92 @@ const BalanceDisplay = () => {
    - Reusable UI elements
    - Common patterns (modals, forms, etc.)
    - Layout components
+
+## Service Layer Pattern (Functional Paradigm)
+
+Services MUST use functional modules with closure-based state management. **NO CLASS-BASED SERVICES.**
+
+### ✅ CORRECT - Functional Module Pattern
+
+```typescript
+// deposit-withdrawal.service.ts
+import { BackendActor } from '@/types/backend.types';
+import { getBackend } from './backend.service';
+
+// Module-level closure state
+let backendActor: BackendActor | null = null;
+
+// Exported functions instead of class methods
+export const setBackendActor = (actor: BackendActor): void => {
+  backendActor = actor;
+};
+
+export const getDepositAddress = async (): Promise<DepositWithdrawalResult> => {
+  const backend = backendActor || getBackend();
+
+  if (!backend) {
+    return { success: false, error: 'Backend not initialized' };
+  }
+
+  try {
+    const result = await backend.get_deposit_address();
+    return { success: true, data: result.Ok };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Pure utility functions
+export const validateTestBTCAddress = (address: string): ValidationResult => {
+  // Pure function - no side effects
+  const bech32Regex = /^tb1q[ac-hj-np-z02-9]{38,58}$/;
+  return bech32Regex.test(address)
+    ? { valid: true }
+    : { valid: false, error: 'Invalid address format' };
+};
+```
+
+### ❌ INCORRECT - Class-based Singleton Pattern
+
+```typescript
+// DON'T DO THIS - Avoid class-based services
+class DepositWithdrawalService {
+  private static instance: DepositWithdrawalService;
+  private backendActor: BackendActor | null = null;
+
+  private constructor() {}
+
+  static getInstance(): DepositWithdrawalService {
+    if (!DepositWithdrawalService.instance) {
+      DepositWithdrawalService.instance = new DepositWithdrawalService();
+    }
+    return DepositWithdrawalService.instance;
+  }
+
+  setBackendActor(actor: BackendActor): void {
+    this.backendActor = actor;
+  }
+}
+
+// WRONG - Don't export class instances
+export const depositWithdrawalService = DepositWithdrawalService.getInstance();
+```
+
+### Key Principles for Services
+
+1. **Use module-level variables** for shared state (closure pattern)
+2. **Export individual functions**, not class instances
+3. **Keep functions pure** when possible (no side effects)
+4. **Use composition** over inheritance
+5. **Maintain immutability** where practical
+
+### Benefits of Functional Services
+
+- **Tree-shakeable**: Unused functions can be eliminated during build
+- **Testable**: Individual functions are easier to test in isolation
+- **Composable**: Functions can be easily combined and reused
+- **No `this` confusion**: Eliminates binding issues and context problems
+- **Simpler mental model**: No need to track instance state or lifecycle
 
 ## Tab-Based Architecture
 
@@ -303,10 +433,48 @@ The project is configured with these aliases in `tsconfig.json`:
 - `@/hooks/` → `src/frontend/src/hooks/`
 - `@/lib/` → `src/frontend/src/lib/`
 
+## Frontend File Organization Standards
+
+### Directory Naming Convention
+
+**IMPORTANT**: All utility modules must follow the directory-per-module pattern:
+
+- ✅ **Correct**: `src/lib/utils/error-filters/index.ts`
+- ✅ **Correct**: `src/lib/utils/styles/index.ts`
+- ❌ **Incorrect**: `src/lib/utils/error-filter.ts`
+- ❌ **Incorrect**: `src/lib/utils/styles.ts`
+
+**Rules**:
+1. Each utility module gets its own directory under `src/lib/utils/`
+2. The main export file is always named `index.ts`
+3. Use plural directory names (e.g., `error-filters`, `styles`, `validators`)
+4. Export from directories, not files directly
+
+**Benefits**:
+- **Scalability**: Easy to add related utilities to the same module
+- **Consistency**: Uniform import patterns across the application
+- **Organization**: Clear separation of concerns
+- **Extensibility**: Room for growth without refactoring
+
+**Import Examples**:
+```typescript
+// ✅ Good - imports from directory
+import { setupErrorFiltering } from '@/lib/utils/error-filters'
+import { cn } from '@/lib/utils/styles'
+
+// ✅ Also good - using the centralized lib index
+import { setupErrorFiltering, cn } from '@/lib'
+```
+
+This convention applies to all utility modules in the frontend codebase.
+
 ## Enforcement
 
 **BLOCKING**: No pull request will be accepted that contains:
 - Relative imports using `../` or complex `./` paths
 - Direct file paths that could use aliases
+- Class-based service implementations
+- Services not following functional module patterns
+- Components with embedded business logic
 
 This structure ensures consistency, maintainability, and scalability across the entire frontend codebase.

@@ -596,11 +596,11 @@ application.
     - ✅ Kebab-case naming convention: `use-auth/index.ts`,
       `use-wallet/index.ts`, etc.
     - ✅ Updated all imports throughout codebase to use new directory structure
-  - ✅ **Service Layer Architecture:** Maintained class-based services for state
-    management
-    - ✅ Services provide singleton pattern for backend actor management
-    - ✅ Clear separation between functional React components and stateful
-      services
+  - ✅ **Service Layer Architecture:** Functional service modules with closure-based
+    state management
+    - ✅ Services provide functional modules with closure-based state for backend actor management
+    - ✅ Clear separation between functional React components and functional
+      service modules
     - ✅ Type-safe integration with auto-generated backend declarations
 
 ## Future Considerations

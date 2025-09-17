@@ -25,13 +25,15 @@ This is an Internet Computer (IC) project that provides a web interface for mana
 - **Language**: TypeScript with React (Functional Components)
 - **Build Tool**: Vite
 - **Purpose**: Web interface for wallet management
-- **Architecture**: Modular component-based with hooks and services
+- **Architecture**: Modular component-based with hooks and functional services
 - **Main Features**:
   - Internet Identity authentication
   - ckTestBTC balance management
   - Send/receive ckTestBTC transactions
   - Bitcoin testnet address integration
   - Faucet functionality (local development)
+
+**📚 For detailed frontend development guidelines, see: [`src/frontend/CLAUDE.md`](src/frontend/CLAUDE.md)**
 
 ### ckTestBTC Integration
 The backend canister communicates with the ckTestBTC canister at `g4xu7-jiaaa-aaaan-aaaaq-cai` which provides:
@@ -146,48 +148,6 @@ The project is configured to work with:
 - **IC mainnet**: Can be deployed to Internet Computer mainnet
 - **ckTestBTC canister**: Hardcoded to `g4xu7-jiaaa-aaaan-aaaaq-cai` (testnet Bitcoin integration)
 
-## Frontend Architecture (Modular Design)
-
-### Component Architecture
-The frontend follows a **functional component architecture** with clear separation of concerns:
-
-**Key Principles:**
-- **Functional Components Only**: No class-based components - all React components use functional syntax with hooks
-- **Custom Hooks**: Business logic encapsulated in reusable hooks (`useAuth`, `useWallet`, `useBackend`)
-- **Service Layer**: Backend communication and business logic separated into service classes
-- **Type Safety**: Comprehensive TypeScript interfaces for all data structures
-- **Component Composition**: Small, focused components that compose into larger features
-
-### Layer Responsibilities
-
-1. **Components (`src/components/`)**
-   - Pure UI rendering and user interaction
-   - Receive data and callbacks as props
-   - No direct backend communication or business logic
-   - Component-specific CSS modules for styling
-
-2. **Hooks (`src/hooks/`)**
-   - State management and side effects
-   - Orchestrate service layer calls
-   - Provide clean APIs to components
-   - Handle React lifecycle events
-
-3. **Services (`src/services/`)**
-   - Backend communication logic
-   - Business logic implementation  
-   - Singleton pattern for shared state
-   - Error handling and data transformation
-
-4. **Types (`src/types/`)**
-   - TypeScript interface definitions
-   - Network configuration utilities
-   - Prop and state type definitions
-   - Ensure type safety across layers
-
-### Error Handling
-- **Browser Extension Error Filtering**: Intelligent error classification system that filters out extension-related errors while preserving application errors
-- **User-Friendly Error Reporting**: Clean error boundaries that don't break on external script issues
-- **Development Console Filtering**: Clean development experience with error type classification
 
 ## Important Notes
 
@@ -195,7 +155,7 @@ The frontend follows a **functional component architecture** with clear separati
 - All Bitcoin operations use the testnet network for safety
 - The frontend uses Vite for fast development and optimized production builds
 - Candid bindings are auto-generated and should be regenerated after backend changes
-- **Architecture is fully functional-based** - no class components used anywhere in the codebase
+- **Architecture is fully functional-based** - no class components or class-based services in the frontend
 - **Modular design** allows easy extension and maintenance of wallet features
 - **Generated Types Integration** - Backend types use auto-generated declarations to prevent type drift
 
@@ -276,40 +236,6 @@ candid-extractor target/wasm32-unknown-unknown/release/backend.wasm
 - candid-extractor works correctly and shows complete interface
 - Issue persists across dfx versions 0.28.0 → 0.29.1
 
-## Frontend File Organization Standards
-
-### Directory Naming Convention
-
-**IMPORTANT**: All utility modules must follow the directory-per-module pattern:
-
-- ✅ **Correct**: `src/lib/utils/error-filters/index.ts`
-- ✅ **Correct**: `src/lib/utils/styles/index.ts`
-- ❌ **Incorrect**: `src/lib/utils/error-filter.ts`
-- ❌ **Incorrect**: `src/lib/utils/styles.ts`
-
-**Rules**:
-1. Each utility module gets its own directory under `src/lib/utils/`
-2. The main export file is always named `index.ts`
-3. Use plural directory names (e.g., `error-filters`, `styles`, `validators`)
-4. Export from directories, not files directly
-
-**Benefits**:
-- **Scalability**: Easy to add related utilities to the same module
-- **Consistency**: Uniform import patterns across the application
-- **Organization**: Clear separation of concerns
-- **Extensibility**: Room for growth without refactoring
-
-**Import Examples**:
-```typescript
-// ✅ Good - imports from directory
-import { setupErrorFiltering } from '@/lib/utils/error-filters'
-import { cn } from '@/lib/utils/styles'
-
-// ✅ Also good - using the centralized lib index
-import { setupErrorFiltering, cn } from '@/lib'
-```
-
-This convention applies to all utility modules in the frontend codebase.
 
 # Specialized Agent Workflow
 
