@@ -83,6 +83,19 @@ application.
   - ✅ **Transaction Pagination:** Paginated view with configurable items per
     page
 
+- ✅ **Bitcoin Testnet Deposit Integration:** Seamless TestBTC to ckTestBTC conversion
+  - ✅ **Deposit Address Generation:** Backend integration with ckTestBTC minter canister
+    - ✅ `get_deposit_address()` function communicates with minter canister for Bitcoin testnet addresses
+    - ✅ Proper Principal-based address generation with optional subaccount support
+    - ✅ TextResult return type for consistent error handling
+    - ✅ Integration with mock minter canister for local development
+    - ✅ Production-ready for IC mainnet ckTestBTC minter integration
+  - ✅ **Frontend Deposit Service:** UI integration for deposit address management
+    - ✅ `deposit-withdrawal.service.ts` provides deposit address retrieval
+    - ✅ Backend actor integration with proper error handling
+    - ✅ User-facing deposit address display in wallet interface
+    - ✅ Seamless integration with existing authentication flow
+
 - ✅ **Wallet Display:** User-friendly wallet interface
   - ✅ Principal ID display with truncation for readability
   - ✅ Copy-to-clipboard functionality for receiving address
@@ -518,6 +531,24 @@ application.
     - ✅ Maintained full IC mainnet compatibility while enabling local development
   - ✅ **Impact:** Live ckTestBTC transfers working with proper block index confirmation
   - ✅ **Architecture Benefit:** Direct standard compliance eliminates proxy-related authentication issues
+
+- ✅ **Bitcoin Testnet Deposit Address Implementation:** Complete TestBTC to ckTestBTC conversion pipeline
+  - ✅ **Problem Solved:** Users needed ability to generate Bitcoin testnet deposit addresses for minting ckTestBTC
+    - ✅ Root requirement: Enable TestBTC deposits that automatically convert to ckTestBTC tokens
+    - ✅ Integration challenge: Communicate with ckTestBTC minter canister for address generation
+  - ✅ **Backend Implementation:** Robust minter canister integration with comprehensive error handling
+    - ✅ Created `get_deposit_address()` function in backend canister with proper Candid interface
+    - ✅ Integrated with both mock and production ckTestBTC minter canisters
+    - ✅ Implemented Principal-based address generation with optional subaccount support
+    - ✅ Added TextResult return type for consistent error handling across the application
+    - ✅ Environment-aware canister resolution (local mock vs IC mainnet minter)
+  - ✅ **Frontend Service Integration:** Seamless UI integration with backend deposit functionality
+    - ✅ Enhanced `deposit-withdrawal.service.ts` with deposit address retrieval capabilities
+    - ✅ Added proper error handling and user feedback for deposit address generation
+    - ✅ Integrated with existing authentication flow and backend actor management
+    - ✅ Exposed deposit addresses through wallet interface for user interaction
+  - ✅ **Impact:** Users can now generate Bitcoin testnet deposit addresses for TestBTC to ckTestBTC conversion
+  - ✅ **Architecture Achievement:** Complete deposit pipeline from Bitcoin testnet to ckTestBTC tokens
 
 ### Architecture Decisions
 
