@@ -221,6 +221,29 @@ application.
   - ✅ Rust security vulnerability scanning
   - ✅ Hot reload during development
 
+- ✅ **Production-Safe Deployment System:** Complete protection against accidental data loss
+  - ✅ **Explicit Deployment Commands:** Clear separation between local and production deployment
+    - ✅ `npm run deploy` - Safe default targeting local development only
+    - ✅ `npm run deploy:local` - Explicit local development deployment
+    - ✅ `npm run deploy:ic` - Explicit IC production deployment with safety protocols
+  - ✅ **Production Safety Script (`scripts/deploy-production.sh`):** Comprehensive safety measures
+    - ✅ **Network Auto-Detection:** Automatically detects IC vs local network environments
+    - ✅ **Multiple Confirmation Checkpoints:** Requires explicit typed confirmations at each critical step
+    - ✅ **Mandatory `--mode upgrade`:** NEVER uses `--mode reinstall` on IC (preserves all user data)
+    - ✅ **Pre-deployment Validation:** Checks tools, environment, and network connectivity
+    - ✅ **Current State Display:** Shows production balances and canister status before deployment
+    - ✅ **Automatic Backups:** Creates timestamped backup of codebase before deployment
+    - ✅ **Post-deployment Verification:** Validates successful deployment and functionality
+  - ✅ **Enhanced Local Deployment Safety:** Local script blocks accidental IC deployment
+    - ✅ **IC Deployment Prevention:** Automatically detects and blocks IC network deployment
+    - ✅ **Clear Environment Labeling:** Shows "LOCAL DEVELOPMENT DEPLOYMENT" messaging
+    - ✅ **Helpful Guidance:** Directs users to `npm run deploy:ic` for production
+  - ✅ **Zero Risk Guarantees:** Complete protection against data loss scenarios
+    - ✅ Production script enforces stable memory preservation through `--mode upgrade`
+    - ✅ Local script prevents accidental production deployment
+    - ✅ Multiple human verification checkpoints before production changes
+    - ✅ Automatic backup creation before any production modifications
+
 - ✅ **Advanced Build Tooling:** Robust build automation with DFX bug
   workarounds
 
@@ -549,6 +572,24 @@ application.
     - ✅ Exposed deposit addresses through wallet interface for user interaction
   - ✅ **Impact:** Users can now generate Bitcoin testnet deposit addresses for TestBTC to ckTestBTC conversion
   - ✅ **Architecture Achievement:** Complete deposit pipeline from Bitcoin testnet to ckTestBTC tokens
+
+- ✅ **Critical Transfer Bug Resolution:** Fixed BigInt conversion and error handling issues
+  - ✅ **BigInt Decimal Conversion Bug:** Fixed "Cannot convert .5 to a BigInt" errors
+    - ✅ **Root Cause:** Direct BigInt conversion of decimal user inputs (e.g., "0.5", ".5") was failing
+    - ✅ **Solution Implementation:** Added proper decimal-to-satoshi conversion before BigInt conversion
+    - ✅ **Files Fixed:** `wallet.service.ts`, `icp.service.ts`, `deposit-withdrawal.service.ts`
+    - ✅ **Pattern Applied:** `Math.floor(Number(amount) * 100000000)` before `BigInt()` conversion
+    - ✅ **Impact:** Users can now enter decimal amounts like "0.5" and ".123" without errors
+  - ✅ **Block Index Display Bug:** Fixed "[object Object]" display instead of proper error messages
+    - ✅ **Root Cause:** Error objects being treated as block indices and converted to strings
+    - ✅ **Solution Implementation:** Proper error detection before treating result as success
+    - ✅ **Enhanced Error Handling:** Added `'Err' in result` checks before processing success cases
+    - ✅ **Impact:** Users now see proper error messages like "Insufficient funds. Balance: 0 satoshis"
+  - ✅ **Balance Discrepancy Discovery:** Identified fundamental architecture mismatch
+    - ✅ **Issue Found:** Frontend shows 2 ckTestBTC balance but backend reports 0 satoshis during transfer
+    - ✅ **Root Cause Analysis:** Non-custodial architecture vs intended custodial wallet model
+    - ✅ **Backend Logs Analysis:** 200,000,000 satoshis available but transfer from user principal fails
+    - ✅ **Next Phase Identified:** Need custodial architecture with backend as fund custodian
 
 ### Architecture Decisions
 

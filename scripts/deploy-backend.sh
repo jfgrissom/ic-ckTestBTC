@@ -1,13 +1,41 @@
 #!/bin/bash
 
 # Deploy script for backend canister with dynamic canister IDs
+# This script is designed for LOCAL DEVELOPMENT ONLY
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+# Function to detect network
+detect_network() {
+    # Check if dfx is configured for IC network
+    if dfx ping --network ic &>/dev/null; then
+        echo "ic"
+    else
+        echo "local"
+    fi
+}
+
+# SAFETY CHECK: Prevent accidental IC deployment
+echo -e "${BLUE}🔍 Detecting deployment network...${NC}"
+CURRENT_NETWORK=$(detect_network)
+
+if [ "$CURRENT_NETWORK" = "ic" ]; then
+    echo -e "${BOLD}${RED}❌ DEPLOYMENT BLOCKED${NC}"
+    echo -e "${RED}This script is for LOCAL DEVELOPMENT only.${NC}"
+    echo -e "${YELLOW}For IC production deployment, use: ${BOLD}npm run deploy:ic${NC}"
+    echo ""
+    echo -e "${YELLOW}💡 This prevents accidental deployment to production.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Local network detected - proceeding with deployment${NC}"
+echo -e "${BOLD}${BLUE}🏠 LOCAL DEVELOPMENT DEPLOYMENT${NC}"
 echo -e "${GREEN}Starting backend deployment...${NC}"
 
 # Note: Canisters should already be created by dfx:setup, but ensure they exist
@@ -100,4 +128,7 @@ if [ $? -ne 0 ]; then
 fi
 
 
-echo -e "${GREEN}✅ Backend deployment complete!${NC}"
+echo -e "${GREEN}✅ Local backend deployment complete!${NC}"
+echo -e "${BLUE}🏠 Deployed to: LOCAL DEVELOPMENT ENVIRONMENT${NC}"
+echo ""
+echo -e "${YELLOW}💡 For production deployment to IC, use: ${BOLD}npm run deploy:ic${NC}"
