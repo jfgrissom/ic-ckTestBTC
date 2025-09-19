@@ -18,9 +18,10 @@ interface TransferArgs {
   created_at_time?: [] | [bigint];
 }
 
-type TransferResult =
-  | { Ok: bigint }
-  | { Err: TransferError };
+interface TransferResult {
+  Ok?: bigint;
+  Err?: TransferError;
+}
 
 interface TransferError {
   BadFee?: { expected_fee: bigint };
@@ -126,7 +127,7 @@ export const getLedgerBalance = async (owner: Principal): Promise<{ success: boo
       subaccount: [], // Use empty array for None in Candid optional
     };
 
-    const balance = await actor.icrc1_balance_of(account);
+    const balance = await actor.icrc1_balance_of(account) as bigint;
     const balanceString = balance.toString();
 
     // Convert from satoshis to ckTestBTC
@@ -171,16 +172,19 @@ export const transferViaLedger = async (
       amountSatoshis: amountBigInt.toString(),
     });
 
-    const result = await actor.icrc1_transfer(transferArgs);
+    const result = await actor.icrc1_transfer(transferArgs) as TransferResult;
 
-    if ('Ok' in result) {
+    if (result.Ok !== undefined) {
       const blockIndex = result.Ok.toString();
       console.log('[Ledger Service] Transfer successful, block index:', blockIndex);
       return { success: true, blockIndex };
-    } else {
+    } else if (result.Err) {
       const error = formatTransferError(result.Err);
       console.error('[Ledger Service] Transfer failed:', error);
       return { success: false, error };
+    } else {
+      console.error('[Ledger Service] Transfer failed: Unknown error');
+      return { success: false, error: 'Unknown transfer error' };
     }
   } catch (error: any) {
     console.error('[Ledger Service] Transfer error:', error);
@@ -194,7 +198,7 @@ export const transferViaLedger = async (
 export const getLedgerFee = async (): Promise<{ success: boolean; fee?: string; error?: string }> => {
   try {
     const actor = await createLedgerActor();
-    const fee = await actor.icrc1_fee();
+    const fee = await actor.icrc1_fee() as bigint;
     const feeString = fee.toString();
 
     // Convert from satoshis to ckTestBTC
@@ -210,27 +214,27 @@ export const getLedgerFee = async (): Promise<{ success: boolean; fee?: string; 
 
 // Helper to format transfer errors
 const formatTransferError = (error: TransferError): string => {
-  if ('BadFee' in error) {
+  if (error.BadFee) {
     const expectedFee = (Number(error.BadFee.expected_fee) / 100000000).toFixed(8);
     return `Bad fee. Expected: ${expectedFee} ckTestBTC`;
   }
-  if ('InsufficientFunds' in error) {
+  if (error.InsufficientFunds) {
     const balance = (Number(error.InsufficientFunds.balance) / 100000000).toFixed(8);
     return `Insufficient funds. Balance: ${balance} ckTestBTC`;
   }
-  if ('TooOld' in error) {
+  if (error.TooOld) {
     return 'Transaction too old';
   }
-  if ('CreatedInFuture' in error) {
+  if (error.CreatedInFuture) {
     return 'Transaction created in future';
   }
-  if ('Duplicate' in error) {
+  if (error.Duplicate) {
     return `Duplicate transaction. Original block: ${error.Duplicate.duplicate_of}`;
   }
-  if ('TemporarilyUnavailable' in error) {
+  if (error.TemporarilyUnavailable) {
     return 'Service temporarily unavailable';
   }
-  if ('GenericError' in error) {
+  if (error.GenericError) {
     return error.GenericError.message;
   }
   return 'Unknown transfer error';

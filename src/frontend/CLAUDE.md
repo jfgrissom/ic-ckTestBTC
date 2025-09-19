@@ -582,6 +582,588 @@ import { setupErrorFiltering, cn } from '@/lib'
 
 This convention applies to all utility modules in the frontend codebase.
 
+## Validation Architecture
+
+### Validation Layer Structure
+
+**MANDATORY**: All validation logic MUST use the shared validation layer in `src/lib/utils/validators/`:
+
+```
+src/lib/utils/validators/
+├── addresses/           # Address validation (Principal, TestBTC, Email)
+│   ├── index.ts        # Main validators and exports
+│   ├── types.ts        # Validation result types
+│   └── index.test.ts   # Comprehensive tests
+├── amounts/            # Amount/balance validation with BigInt conversion
+│   ├── index.ts        # Amount validation and conversion utilities
+│   ├── types.ts        # Amount validation types
+│   └── index.test.ts   # Amount validation tests
+├── tokens/             # Token-specific rules and constants
+│   ├── index.ts        # Token utilities and helpers
+│   ├── constants.ts    # Token constants (decimals, fees, limits)
+│   ├── types.ts        # Token types and interfaces
+│   └── index.test.ts   # Token validation tests
+└── forms/              # Form validation helpers and state management
+    ├── index.ts        # Form validation utilities
+    ├── types.ts        # Form validation types
+    └── index.test.ts   # Form validation tests
+```
+
+### Established Library Usage
+
+**CRITICAL**: Always use established libraries for common validation:
+
+1. **IC Principal Validation**: Use `@dfinity/principal`
+2. **BigInt Operations**: Use native BigInt with proper error handling
+3. **Email Validation**: Use `validator.js`
+4. **Form Validation**: Use built-in form validation helpers
+
+### Validation Patterns
+
+```typescript
+// ✅ CORRECT - Using shared validators from @/lib
+import {
+  validatePrincipalAddress,
+  validateAndConvertAmount,
+  validateForm,
+  TokenType
+} from '@/lib';
+
+const validateSendInputs = (recipient: string, amount: string, token: TokenType, balance: string) => {
+  return validateForm({ recipient, amount, token }, [
+    {
+      field: 'recipient',
+      validator: validatePrincipalAddress,
+      required: true,
+      label: 'Recipient'
+    },
+    {
+      field: 'amount',
+      validator: (amt) => validateAndConvertAmount(amt, {
+        balance,
+        token,
+        includesFees: true
+      }),
+      required: true,
+      label: 'Amount'
+    }
+  ]);
+};
+
+// ❌ WRONG - Inline validation in components/hooks
+const validateInputs = () => {
+  if (!recipient.match(/^[a-z0-9-]+$/)) { // WRONG - should use validatePrincipalAddress
+    return { valid: false, error: 'Invalid format' };
+  }
+
+  if (parseFloat(amount) > parseFloat(balance)) { // WRONG - should use validateAndConvertAmount
+    return { valid: false, error: 'Insufficient balance' };
+  }
+
+  // More inline validation... BAD
+};
+```
+
+### Address Validation Examples
+
+```typescript
+// Principal ID validation with @dfinity/principal
+import { validatePrincipalAddress } from '@/lib';
+
+const result = validatePrincipalAddress('rdmx6-jaaaa-aaaah-qcaiq-cai');
+if (result.valid) {
+  console.log('Normalized:', result.normalizedAddress);
+  console.log('Type:', result.addressType); // 'principal'
+} else {
+  console.error('Error:', result.error);
+  console.error('Details:', result.details);
+}
+
+// TestBTC address validation
+import { validateTestBTCAddress } from '@/lib';
+
+const testBTCResult = validateTestBTCAddress('tb1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh');
+// Supports: tb1q... (bech32), 2... (P2SH), m.../n... (legacy)
+```
+
+### Amount Validation with BigInt Conversion
+
+```typescript
+// Comprehensive amount validation with conversion
+import { validateAndConvertAmount, TokenType } from '@/lib';
+
+const result = validateAndConvertAmount('0.00123456', {
+  balance: '1000000000', // Balance in smallest units (satoshis)
+  token: 'ckTestBTC' as TokenType,
+  includesFees: true,
+  operationType: 'TRANSFER'
+});
+
+if (result.valid) {
+  console.log('Converted amount:', result.convertedAmount); // BigInt in satoshis
+  console.log('Formatted amount:', result.formattedAmount); // '0.00123456'
+  console.log('Max available:', result.maxAvailable); // After fees
+  console.log('Required fee:', result.requiredFee); // '0.00001 ckTestBTC'
+} else {
+  console.error('Validation failed:', result.error);
+}
+```
+
+### Token Configuration Usage
+
+```typescript
+// Access token constants and utilities
+import {
+  TokenType,
+  getTokenConfig,
+  formatTokenAmount,
+  calculateMaxAvailable,
+  TOKEN_CONSTANTS
+} from '@/lib';
+
+const token: TokenType = 'ckTestBTC';
+const config = getTokenConfig(token);
+
+console.log('Min transfer:', config.minTransfer); // '0.00001'
+console.log('Decimals:', config.decimals);        // 8
+console.log('Fee:', config.fee);                  // '0.00001'
+
+// Format amounts from smallest units
+const formatted = formatTokenAmount('12345678', token); // 0.12345678
+const maxSendable = calculateMaxAvailable('100000000', token); // Including fees
+```
+
+### Form Validation Usage
+
+```typescript
+// Complete form validation with multiple fields
+import { validateForm, FormValidationRule } from '@/lib';
+
+interface SendFormData {
+  recipient: string;
+  amount: string;
+  token: TokenType;
+}
+
+const rules: FormValidationRule<SendFormData>[] = [
+  {
+    field: 'recipient',
+    validator: validatePrincipalAddress,
+    required: true,
+    label: 'Recipient'
+  },
+  {
+    field: 'amount',
+    validator: (amount, formData) => validateAndConvertAmount(amount, {
+      balance: getCurrentBalance(formData?.token || 'ckTestBTC'),
+      token: formData?.token || 'ckTestBTC',
+      includesFees: true
+    }),
+    required: true,
+    label: 'Amount',
+    dependsOn: ['token'] // Amount validation depends on token selection
+  }
+];
+
+const result = validateForm(formData, rules);
+if (!result.valid) {
+  // result.errors contains field-specific error messages
+  // result.details contains additional validation details
+}
+```
+
+### Validation in Hooks Pattern
+
+**Services and hooks MUST delegate to shared validators:**
+
+```typescript
+// ✅ CORRECT - Hook using shared validation layer
+export const useWallet = () => {
+  const validateSendInputs = (recipient: string, amount: string, token: TokenType) => {
+    return validateForm({ recipient, amount, token }, [
+      {
+        field: 'recipient',
+        validator: validatePrincipalAddress,
+        required: true
+      },
+      {
+        field: 'amount',
+        validator: (amt) => validateAndConvertAmount(amt, {
+          balance: getBalanceForToken(token),
+          token,
+          includesFees: true
+        }),
+        required: true
+      }
+    ]);
+  };
+
+  const calculateMaxAmount = (token: TokenType) => {
+    return calculateMaxAvailable(getBalanceForToken(token), token, 'TRANSFER');
+  };
+
+  return {
+    validateSendInputs,
+    calculateMaxAmount,
+    // ... other hook functions
+  };
+};
+
+// ❌ WRONG - Hook with inline validation
+export const useWallet = () => {
+  const validateSendInputs = (recipient: string, amount: string) => {
+    // WRONG - Inline Principal validation
+    if (!recipient.match(/^[a-z0-9-]+$/)) {
+      return { valid: false, error: 'Invalid Principal' };
+    }
+
+    // WRONG - Inline amount validation
+    if (parseFloat(amount) <= 0) {
+      return { valid: false, error: 'Invalid amount' };
+    }
+
+    // ... more inline validation
+  };
+};
+```
+
+### Architecture Benefits
+
+1. **DRY Principle**: Single source of truth for validation rules
+2. **Type Safety**: Comprehensive TypeScript interfaces
+3. **Established Libraries**: Reliable validation using proven libraries
+4. **Future-Proof**: Easy to extend without modifying components
+5. **Testability**: Validators can be tested in isolation
+6. **Consistency**: Same validation behavior across all components
+7. **Error Handling**: Standardized error message format
+
+### Migration Pattern for Existing Code
+
+When refactoring components with inline validation:
+
+1. **Identify validation logic** in components
+2. **Move to appropriate validator** in `@/lib/utils/validators/`
+3. **Update hooks** to use shared validators
+4. **Simplify components** to only handle UI rendering
+5. **Add tests** for new validation functions
+
+## Functionality Classification Framework
+
+### MANDATORY: Four-Layer Architecture
+
+**CRITICAL**: Before implementing ANY feature, ALL functionality MUST be classified into these four layers. This prevents architecture violations and ensures clean separation of concerns.
+
+#### 1. 🎨 **Presentation Logic** (Components Only)
+
+**ALLOWED IN COMPONENTS:**
+- JSX rendering and UI composition
+- User interaction handling (onClick, onChange, onSubmit)
+- Local UI state management (modals open/closed, hover states, form focus)
+- Visual feedback and animations
+- Event delegation to parent components via props
+- Conditional rendering based on props
+
+**EXAMPLES:**
+```typescript
+// ✅ CORRECT - Pure presentation logic
+const SendButton: React.FC<{ onSend: () => void; disabled: boolean }> = ({ onSend, disabled }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <button
+      onClick={onSend}
+      disabled={disabled}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={cn("btn", isHovered && "btn-hover")}
+    >
+      Send Transaction
+    </button>
+  );
+};
+```
+
+**BELONGS IN**: Components (`src/components/`)
+
+#### 2. 🧠 **Business Logic** (Hooks + Services)
+
+**BUSINESS LOGIC INCLUDES:**
+- Data processing and transformations
+- Domain-specific calculations (fees, balances, conversions)
+- Workflow orchestration and state management
+- Transaction preparation and formatting
+- Complex state transitions
+- Data aggregation and statistics
+
+**EXAMPLES:**
+```typescript
+// ✅ CORRECT - Business logic in hook
+export const useWallet = () => {
+  const calculateTransactionFee = (amount: string, token: TokenType): string => {
+    const config = getTokenConfig(token);
+    return (parseFloat(amount) * parseFloat(config.fee)).toFixed(config.decimals);
+  };
+
+  const prepareTransaction = (recipient: string, amount: string, token: TokenType) => {
+    const convertedAmount = convertToSmallestUnits(amount, token);
+    const fee = calculateTransactionFee(amount, token);
+    return { recipient, amount: convertedAmount, fee };
+  };
+
+  return { calculateTransactionFee, prepareTransaction };
+};
+```
+
+**BELONGS IN**: Hooks (`src/hooks/`) and Services (`src/services/`)
+
+#### 3. ✅ **Validation Logic** (Shared Validation Layer)
+
+**VALIDATION LOGIC INCLUDES:**
+- Input validation and sanitization
+- Business rule enforcement
+- Data integrity checks
+- Error message generation
+- Constraint validation (min/max amounts, address formats)
+- Cross-field validation dependencies
+
+**EXAMPLES:**
+```typescript
+// ✅ CORRECT - Validation in shared layer
+export const validateTransferInputs = (
+  recipient: string,
+  amount: string,
+  token: TokenType,
+  balance: string
+): FormValidationResult => {
+  return validateForm({ recipient, amount }, [
+    {
+      field: 'recipient',
+      validator: validatePrincipalAddress,
+      required: true,
+      label: 'Recipient'
+    },
+    {
+      field: 'amount',
+      validator: (amt) => validateAndConvertAmount(amt, {
+        balance,
+        token,
+        includesFees: true
+      }),
+      required: true,
+      label: 'Amount'
+    }
+  ]);
+};
+```
+
+**BELONGS IN**: Validation Layer (`src/lib/utils/validators/`)
+
+#### 4. 🔌 **External Connectivity Logic** (Services Only)
+
+**CONNECTIVITY LOGIC INCLUDES:**
+- API communication and HTTP requests
+- Backend actor management and canister calls
+- Network error handling and retry logic
+- Data serialization/deserialization
+- External service integration
+- WebSocket connections and real-time data
+
+**EXAMPLES:**
+```typescript
+// ✅ CORRECT - Connectivity in service
+export const transferTokens = async (
+  recipient: string,
+  amount: bigint,
+  token: TokenType
+): Promise<TransferResult> => {
+  const backend = getBackend();
+
+  if (!backend) {
+    return { success: false, error: 'Backend not initialized' };
+  }
+
+  try {
+    const result = await backend.transfer_tokens({
+      to: recipient,
+      amount,
+      token: token
+    });
+
+    return result.Ok
+      ? { success: true, blockIndex: result.Ok }
+      : { success: false, error: result.Err };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Transfer failed'
+    };
+  }
+};
+```
+
+**BELONGS IN**: Services (`src/services/`)
+
+### Pre-Implementation Protocol
+
+**MANDATORY STEPS** before writing ANY code:
+
+#### 1. **CLASSIFY** - Function Classification Audit
+```markdown
+For each function you plan to implement, document:
+- Function name: `calculateMaxSendableAmount`
+- Functionality: Calculates maximum amount user can send including fees
+- Classification: 🧠 Business Logic
+- Belongs in: Hook (`useWallet`)
+- Reason: Involves domain calculations and fee considerations
+```
+
+#### 2. **VALIDATE** - Layer Violation Check
+```markdown
+- [ ] No business logic in components
+- [ ] No validation logic outside shared validators
+- [ ] No API calls outside services
+- [ ] No presentation logic in hooks/services
+```
+
+#### 3. **EXTRACT** - Separation of Concerns Planning
+```markdown
+If violations found:
+- Identify misplaced logic
+- Plan extraction to appropriate layer
+- Design clean interfaces between layers
+- Document data flow and dependencies
+```
+
+#### 4. **DOCUMENT** - Architectural Decision Recording
+```markdown
+Document in code comments:
+// ARCHITECTURE: Business logic for calculating maximum sendable amount
+// LAYER: 🧠 Business Logic (Hook)
+// DEPENDENCIES: Token configuration, fee calculation
+// INTERFACES: Returns formatted string for UI display
+```
+
+### Post-Implementation Verification
+
+**MANDATORY STEPS** after writing code:
+
+#### 1. **AUDIT** - Layer Compliance Review
+- Review each function for correct layer placement
+- Verify no cross-layer violations
+- Check interface boundaries are clean
+- Validate single responsibility principle
+
+#### 2. **TEST** - Separation Verification
+- Test each layer independently
+- Verify business logic works without UI
+- Test validation layer with various inputs
+- Confirm services handle network failures gracefully
+
+#### 3. **DOCUMENT** - Update Project Documentation
+- Update FEATURES.md with architectural decisions
+- Document any complex layer interactions
+- Note any technical debt or future refactoring needs
+
+### Common Violation Patterns to Avoid
+
+#### ❌ **SEVERE VIOLATIONS**
+
+```typescript
+// ❌ WRONG - Business logic in component
+const SendModal = () => {
+  const calculateFee = (amount: string) => {
+    return (parseFloat(amount) * 0.0001).toFixed(8); // BUSINESS LOGIC IN COMPONENT
+  };
+
+  const validateAddress = (addr: string) => {
+    return addr.match(/^[a-z0-9-]+$/); // VALIDATION IN COMPONENT
+  };
+
+  const sendTransaction = async () => {
+    const result = await fetch('/api/send'); // API CALL IN COMPONENT
+  };
+};
+```
+
+#### ✅ **CORRECT PATTERNS**
+
+```typescript
+// ✅ CORRECT - Component delegates to appropriate layers
+const SendModal = ({
+  onSend,
+  onValidate,
+  onCalculateFee
+}: SendModalProps) => {
+  const [amount, setAmount] = useState(''); // UI STATE ONLY
+
+  const handleSend = () => {
+    const validation = onValidate(address, amount); // DELEGATE TO VALIDATION
+    if (validation.valid) {
+      onSend(address, amount); // DELEGATE TO BUSINESS LOGIC
+    }
+  };
+
+  return <form onSubmit={handleSend}>...</form>; // PRESENTATION ONLY
+};
+```
+
+### Enforcement Mechanisms
+
+#### Code Review Checklist
+```markdown
+**Architecture Compliance Checklist:**
+- [ ] All functions classified into appropriate layers
+- [ ] No business logic in presentation components
+- [ ] Validation logic uses shared validation layer
+- [ ] External connectivity isolated in services
+- [ ] Each function has single responsibility
+- [ ] Layer interfaces are clean and well-defined
+- [ ] No circular dependencies between layers
+```
+
+#### Automated Detection Patterns
+```markdown
+**RED FLAGS** that indicate violations:
+- `fetch()`, `axios`, or API calls in components
+- Mathematical calculations in component render methods
+- Validation regex or business rules in components
+- Direct backend actor usage outside services
+- Complex state management logic in components
+```
+
+### Benefits of Four-Layer Architecture
+
+1. **🧪 Testability**: Each layer can be tested independently
+2. **🔄 Reusability**: Business logic can be shared across components
+3. **🛠 Maintainability**: Changes isolated to appropriate layers
+4. **📖 Readability**: Clear separation makes code self-documenting
+5. **🚀 Scalability**: New features follow established patterns
+6. **🔒 Reliability**: Validation and error handling centralized
+7. **⚡ Performance**: Business logic optimized independently from UI
+
+### Developer Workflow Integration
+
+```markdown
+**For Every Feature/Bug Fix:**
+
+1. **Planning Phase**:
+   - Classify all required functionality
+   - Design layer interactions
+   - Identify reusable components
+
+2. **Implementation Phase**:
+   - Implement layers bottom-up (validation → business → connectivity → presentation)
+   - Test each layer as you build
+   - Maintain clean interfaces
+
+3. **Review Phase**:
+   - Audit layer compliance
+   - Verify architectural decisions
+   - Update documentation
+```
+
+This framework ensures every piece of code has a clear purpose and place in the architecture, preventing violations before they occur.
+
 ## Architecture Violation Severity Levels
 
 ### 🔴 SEVERE Violations (Must Fix Immediately)

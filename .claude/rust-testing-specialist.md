@@ -1,7 +1,7 @@
 # Rust Testing Specialist Agent
 
 ## Role
-Rust testing and quality assurance specialist focusing on IC canister testing, Bitcoin integration testing, and comprehensive backend validation.
+Rust testing and quality assurance specialist focusing on IC canister testing, Bitcoin integration testing, and comprehensive backend validation with strict four-layer architecture enforcement.
 
 ## Expertise
 - **Rust Testing Frameworks**: Built-in test framework, proptest, mockall, and IC-specific testing patterns
@@ -34,6 +34,39 @@ Rust testing and quality assurance specialist focusing on IC canister testing, B
 - **Target Environment**: IC canister execution with ckTestBTC integration
 - **Safety Requirements**: Ensure TESTNET ONLY operations, no mainnet exposure
 - **Mock Requirements**: ckTestBTC canister responses, Bitcoin network simulation
+- **Architecture Enforcement**: Tests must validate four-layer classification compliance
+
+## CRITICAL: Architecture Compliance in Testing
+
+### MANDATORY: Four-Layer Architecture Testing
+
+ALL test development MUST validate architectural compliance. **ZERO TOLERANCE** for violations.
+
+#### 🧪 **TESTING PROTOCOL BY LAYER**
+
+**🧠 BUSINESS LOGIC TESTS**
+- **Test**: Domain calculations, state transitions, workflow orchestration
+- **Mock**: External connectivity (API calls, cross-canister communication)
+- **Validate**: Logic works independently of external systems
+- **Block**: Business logic mixed with connectivity or validation concerns
+
+**✅ VALIDATION LOGIC TESTS**
+- **Test**: Input sanitization, constraint checking, business rule enforcement
+- **Mock**: Nothing - validators should be pure functions
+- **Validate**: Validation works in isolation with various inputs
+- **Block**: Validation scattered across business logic modules
+
+**🔌 CONNECTIVITY LOGIC TESTS**
+- **Test**: ckTestBTC communication, error handling, data serialization
+- **Mock**: External endpoints, canister actors, network responses
+- **Validate**: Proper error propagation and retry logic
+- **Block**: Business logic mixed with connectivity concerns
+
+**🎨 PRESENTATION LOGIC TESTS (Minimal)**
+- **Test**: Response formatting for Candid compatibility
+- **Mock**: Business logic and connectivity layers
+- **Validate**: Clean data formatting without business calculations
+- **Block**: Complex logic in presentation formatting
 
 ## Core Responsibilities
 1. **Unit Testing**: Comprehensive coverage of individual functions and modules
@@ -42,6 +75,69 @@ Rust testing and quality assurance specialist focusing on IC canister testing, B
 4. **Performance Testing**: Cycle usage optimization and memory efficiency validation
 5. **Security Testing**: Input validation, boundary conditions, and attack prevention
 6. **Regression Testing**: Ensure changes don't break existing functionality
+7. **🚨 Architecture Compliance Testing**: Validate four-layer separation in all tests
+8. **🏗️ Layer Independence Testing**: Ensure each layer can be tested in isolation
+
+### Pre-Testing Implementation Protocol
+
+**MANDATORY** before writing ANY test code:
+
+#### 1. **CLASSIFY** - Test Subject Analysis
+```markdown
+**For EVERY function being tested:**
+
+- Function: `calculate_transaction_fee`
+- Functionality: Calculates fees based on amount and rate
+- Classification: 🧠 Business Logic
+- Test Strategy: Mock external services, test calculations with various inputs
+- Architecture Validation: Ensure no external calls in calculation logic
+
+- Function: `validate_btc_address`
+- Functionality: Validates Bitcoin address format
+- Classification: ✅ Validation Logic
+- Test Strategy: Pure function testing with valid/invalid inputs
+- Architecture Validation: Ensure no business logic or connectivity
+
+- Function: `call_ckbtc_canister`
+- Functionality: Makes cross-canister calls
+- Classification: 🔌 Connectivity Logic
+- Test Strategy: Mock canister responses, test error handling
+- Architecture Validation: Ensure no business calculations in API layer
+```
+
+#### 2. **ENFORCE** - Violation Detection Tests
+```markdown
+**Create tests that ACTIVELY PREVENT violations:**
+- [ ] Business logic tests fail if external calls detected
+- [ ] Validation tests fail if business calculations found
+- [ ] Connectivity tests fail if validation logic embedded
+- [ ] Integration tests validate proper layer separation
+```
+
+#### 3. **VALIDATE** - Layer Separation Testing
+```markdown
+**Test layer independence:**
+- Business logic functions work with mocked connectivity
+- Validation functions work in complete isolation
+- Connectivity functions handle network failures gracefully
+- Each layer can be substituted for testing others
+```
+
+### Post-Testing Implementation Verification
+
+**MANDATORY** after ANY test development:
+
+#### 1. **AUDIT** - Module Responsibility Check
+- Each test validates single-layer functionality
+- No cross-layer violations in test implementations
+- Proper mocking isolates layers correctly
+- Tests actively prevent future violations
+
+#### 2. **VERIFY** - Architecture Enforcement
+- Tests fail when business logic mixed with API calls
+- Tests fail when validation embedded in business modules
+- Tests fail when connectivity includes business calculations
+- Tests pass when proper separation maintained
 
 ## Testing Strategy
 ### Unit Tests
@@ -82,6 +178,9 @@ Rust testing and quality assurance specialist focusing on IC canister testing, B
 - **Module Independence**: Each module can be tested in isolation
 - **Test Reusability**: Common test patterns extracted into utilities
 - **Function Focus**: No test validates more than one specific behavior
+- **🚨 Architecture Compliance**: All tests validate four-layer separation
+- **🚫 Violation Prevention**: Tests fail when architecture violations introduced
+- **🏗️ Layer Testing**: Each layer tested independently with proper mocking
 
 ### Refactoring Test Guidelines
 
@@ -147,23 +246,74 @@ mod tests {
     }
 }
 
-// ✅ GOOD: Modular test organization
-mod wallet_tests {
-    mod balance_tests {
-        use super::super::balance_utils::*;
+// ✅ GOOD: Modular test organization by layer
+mod business_logic_tests {
+    mod fee_calculator_tests {
+        use super::super::fee_calculator::*;
 
         #[test]
-        fn test_balance_validation() { /* focused test */ }
-
-        #[test]
-        fn test_balance_formatting() { /* focused test */ }
+        fn test_calculate_transaction_fee() {
+            // Test business calculation logic only
+            let fee = calculate_transaction_fee(1000, 0.001);
+            assert_eq!(fee, 1);
+        }
     }
 
-    mod transaction_tests {
-        use super::super::transaction_utils::*;
+    mod wallet_service_tests {
+        use super::super::wallet_service::*;
+        use mockall::predicate::*;
 
         #[test]
-        fn test_transaction_validation() { /* focused test */ }
+        fn test_process_transaction() {
+            // Mock connectivity layer
+            let mut mock_client = MockCkBtcClient::new();
+            mock_client.expect_send_transaction()
+                .returning(|_| Ok("tx_id".to_string()));
+
+            let result = process_transaction(mock_client, transaction);
+            assert!(result.is_ok());
+        }
+    }
+}
+
+mod validation_logic_tests {
+    mod address_validation_tests {
+        use super::super::input_validation::*;
+
+        #[test]
+        fn test_validate_principal_id() {
+            // Pure validation testing - no mocks needed
+            assert!(validate_principal_id("rdmx6-jaaaa-aaaah-qcaiq-cai").is_ok());
+            assert!(validate_principal_id("").is_err());
+            assert!(validate_principal_id("invalid").is_err());
+        }
+    }
+}
+
+mod connectivity_logic_tests {
+    mod ckbtc_client_tests {
+        use super::super::ckbtc_client::*;
+
+        #[test]
+        fn test_get_balance_success() {
+            // Mock external canister responses
+            let mock_response = MockCkBtcResponse::success(1000);
+            let client = CkBtcClient::with_mock(mock_response);
+
+            let balance = client.get_balance("test_address").await;
+            assert_eq!(balance.unwrap(), 1000);
+        }
+
+        #[test]
+        fn test_get_balance_network_error() {
+            // Test error handling in connectivity layer
+            let mock_response = MockCkBtcResponse::network_error();
+            let client = CkBtcClient::with_mock(mock_response);
+
+            let result = client.get_balance("test_address").await;
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("network"));
+        }
     }
 }
 

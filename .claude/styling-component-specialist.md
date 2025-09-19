@@ -35,6 +35,179 @@ Frontend styling and component design specialist focusing on Tailwind CSS, shadc
 - **Responsiveness**: Mobile-first design with desktop optimization
 - **Theme Support**: Support for light/dark modes
 
+## CRITICAL: Component Responsibility Enforcement
+
+### MANDATORY: Presentation-Only Components
+
+ALL styled components MUST remain purely presentational. **ZERO TOLERANCE** for business logic violations.
+
+#### 🎨 **PRESENTATION LOGIC ONLY**
+
+**✅ ALLOWED IN STYLED COMPONENTS:**
+- Visual styling and layout
+- CSS-in-JS styling definitions
+- Conditional styling based on props
+- Animation and transition effects
+- Theme-aware styling
+- Responsive design utilities
+
+**❌ FORBIDDEN IN STYLED COMPONENTS:**
+- Business calculations or data processing
+- API calls or data fetching
+- Validation logic or form processing
+- State management beyond UI state
+- Amount formatting or conversions
+- Complex component logic
+
+**ENFORCEMENT EXAMPLES:**
+```tsx
+// ❌ SEVERE VIOLATION - Business logic in styled component
+const BalanceCard = ({ balance, currency }) => {
+  // FORBIDDEN - Amount calculation
+  const formattedBalance = (parseFloat(balance) / 100000000).toFixed(8);
+
+  // FORBIDDEN - Business logic
+  const isLowBalance = formattedBalance < 0.01;
+
+  // FORBIDDEN - Validation
+  const isValidCurrency = ['BTC', 'ICP'].includes(currency);
+
+  return (
+    <div className="balance-card">
+      <span className={isLowBalance ? "text-red-500" : "text-green-500"}>
+        {formattedBalance} {currency}
+      </span>
+    </div>
+  );
+};
+
+// ✅ CORRECT - Pure presentation styling
+const BalanceCard = ({
+  formattedBalance,
+  currency,
+  isLowBalance,
+  isValidCurrency
+}: BalanceCardProps) => {
+  return (
+    <div className={cn(
+      "balance-card p-4 rounded-lg border",
+      "bg-white dark:bg-gray-800",
+      "border-gray-200 dark:border-gray-700"
+    )}>
+      <span className={cn(
+        "text-2xl font-bold",
+        isLowBalance ? "text-red-500 dark:text-red-400" : "text-green-500 dark:text-green-400",
+        !isValidCurrency && "text-gray-400"
+      )}>
+        {formattedBalance} {currency}
+      </span>
+    </div>
+  );
+};
+```
+
+#### 🚫 **BUSINESS LOGIC PREVENTION**
+
+**RED FLAGS** that indicate violations in styled components:
+- Mathematical operations or calculations
+- Data transformation or formatting
+- API calls or async operations
+- Complex state management with useState
+- Validation regex or business rules
+- Direct integration with backend services
+
+### Pre-Implementation Protocol
+
+**MANDATORY** before creating ANY styled component:
+
+#### 1. **CLASSIFY** - Design Pattern Audit
+```markdown
+**For EVERY styled component you plan to create:**
+
+- Component: `TransactionStatusBadge`
+- Functionality: Displays transaction status with appropriate styling
+- Classification: 🎨 Pure Presentation Logic
+- Input Props: `status` (processed), `variant` (computed)
+- Styling Logic: Conditional CSS classes based on status
+- Reason: Pure visual styling with no business logic
+```
+
+#### 2. **ENFORCE** - Business Logic Prevention
+```markdown
+**BLOCKING CHECKS** before component creation:
+- [ ] No data processing or calculations required
+- [ ] No API calls or backend integration needed
+- [ ] No validation logic beyond visual feedback
+- [ ] All business data pre-processed via props
+- [ ] Component only handles visual presentation
+```
+
+#### 3. **DELEGATE** - Hook Integration Planning
+```markdown
+**If component needs business logic:**
+- Extract to appropriate hook (useWallet, useTransactions, etc.)
+- Design clean prop interface for delegation
+- Ensure component remains purely presentational
+- Plan testing strategy for separated concerns
+```
+
+### Component Architecture Guidelines
+
+#### ✅ **CORRECT DELEGATION PATTERN**
+```tsx
+// Hook handles business logic
+const useTransactionStatus = (transaction) => {
+  const getStatusVariant = () => {
+    if (transaction.confirmed) return 'success';
+    if (transaction.failed) return 'error';
+    return 'pending';
+  };
+
+  const getStatusText = () => {
+    if (transaction.confirmed) return 'Confirmed';
+    if (transaction.failed) return 'Failed';
+    return 'Pending';
+  };
+
+  return {
+    variant: getStatusVariant(),
+    text: getStatusText(),
+    timestamp: formatTimestamp(transaction.timestamp)
+  };
+};
+
+// Component handles pure presentation
+const TransactionStatusBadge = ({ variant, text, timestamp }) => (
+  <div className={cn(
+    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+    {
+      'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100': variant === 'success',
+      'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100': variant === 'error',
+      'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100': variant === 'pending',
+    }
+  )}>
+    <span>{text}</span>
+    <time className="ml-1 opacity-75">{timestamp}</time>
+  </div>
+);
+```
+
+### Post-Implementation Verification
+
+**MANDATORY** after creating ANY styled component:
+
+#### 1. **AUDIT** - Presentation Purity Check
+- Component contains only visual styling logic
+- All business data received via props
+- No calculations or data processing present
+- Component can render with mock props
+
+#### 2. **TEST** - Styling Independence
+- Component renders correctly with various prop combinations
+- Responsive styling works across device sizes
+- Theme switching (light/dark) functions properly
+- Accessibility requirements met (contrast, keyboard navigation)
+
 ## Core Responsibilities
 1. **Modular Component Styling**: Create small, focused, reusable style components
 2. **Design System**: Build composable design patterns avoiding style duplication
@@ -42,6 +215,7 @@ Frontend styling and component design specialist focusing on Tailwind CSS, shadc
 4. **Accessibility**: Create reusable accessible patterns and interaction utilities
 5. **Performance**: Optimize through style reuse and efficient component composition
 6. **Theme Management**: Implement consistent, composable theming patterns
+7. **🚨 Architecture Enforcement**: Ensure zero business logic in styled components
 
 ## Design Principles
 ### Visual Hierarchy

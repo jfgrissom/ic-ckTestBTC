@@ -66,7 +66,21 @@ export const transferICP = async (to: string, amount: string): Promise<ICPTransf
     }
 
     const toPrincipal = Principal.fromText(to);
-    const amountBigInt = BigInt(amount);
+
+    // Validate and convert ICP amount to e8s (smallest units)
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return { success: false, error: 'Invalid amount. Please enter a valid positive number.' };
+    }
+
+    // Convert ICP amount to e8s (multiply by 100,000,000)
+    const amountE8s = Math.floor(numAmount * 100000000);
+
+    if (amountE8s === 0) {
+      return { success: false, error: 'Amount too small. Minimum amount is 0.00000001 ICP.' };
+    }
+
+    const amountBigInt = BigInt(amountE8s);
 
     const result = await (backend as any).transfer_icp(toPrincipal, amountBigInt);
 

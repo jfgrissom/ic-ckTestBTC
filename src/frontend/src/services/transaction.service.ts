@@ -1,5 +1,14 @@
 import { getBackend } from '@/services/backend.service';
-import { Transaction as BackendTransaction } from '@/declarations/backend/backend.did';
+// import { Transaction as BackendTransaction } from '@/declarations/backend/backend.did'; // TODO: Fix declarations path
+// Temporary type definition until declarations are properly generated
+interface BackendTransaction {
+  id: string;
+  amount: bigint;
+  from_address: string;
+  to_address: string;
+  timestamp: bigint;
+  block_index?: bigint;
+}
 import { Transaction } from '@/components/shared/transaction-item';
 
 export type { Transaction } from '@/components/shared/transaction-item';

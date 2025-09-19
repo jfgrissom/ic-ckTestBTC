@@ -5,6 +5,15 @@ import { useTransactionHistory } from '@/hooks/use-transaction-history';
 import { useICP } from '@/hooks/use-icp';
 import { useBackend } from '@/hooks/use-backend';
 import { useError } from '@/contexts/error-context';
+import {
+  validatePrincipalAddress,
+  validateAndConvertAmount,
+  validateForm,
+  calculateMaxAvailable,
+  TokenType,
+  FormValidationRule,
+  FormValidationResult
+} from '@/lib';
 
 interface UseWalletReturn extends WalletState, WalletActions, TransactionState, TransactionActions {
   handleFaucet: () => Promise<void>;
@@ -23,6 +32,10 @@ interface UseWalletReturn extends WalletState, WalletActions, TransactionState, 
   transactionStats: { total: number; confirmed: number; pending: number; failed: number };
   refreshTransactions: () => Promise<void>;
   getRecentTransactions: (limit?: number) => any[];
+  // Validation functions using shared validation layer
+  validateSendInputs: (recipient: string, amount: string, token: TokenType) => FormValidationResult<{ recipient: string; amount: string; token: TokenType }>;
+  calculateMaxSendableAmount: (token: TokenType) => string;
+  getBalanceForToken: (token: TokenType) => string;
 }
 
 export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
@@ -166,6 +179,55 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     }
   };
 
+  // Helper function to get balance for a specific token
+  const getBalanceForToken = (token: TokenType): string => {
+    switch (token) {
+      case 'ICP':
+        return icpBalance;
+      case 'ckTestBTC':
+        return balance;
+      default:
+        return '0';
+    }
+  };
+
+  // Validation function using shared validation layer
+  const validateSendInputs = (
+    recipient: string,
+    amount: string,
+    token: TokenType
+  ): FormValidationResult<{ recipient: string; amount: string; token: TokenType }> => {
+    const currentBalance = getBalanceForToken(token);
+
+    const rules: FormValidationRule<{ recipient: string; amount: string; token: TokenType }>[] = [
+      {
+        field: 'recipient',
+        validator: validatePrincipalAddress,
+        required: true,
+        label: 'Recipient'
+      },
+      {
+        field: 'amount',
+        validator: (amt) => validateAndConvertAmount(amt, {
+          balance: currentBalance,
+          token,
+          includesFees: true,
+          operationType: 'TRANSFER'
+        }),
+        required: true,
+        label: 'Amount'
+      }
+    ];
+
+    return validateForm({ recipient, amount, token }, rules);
+  };
+
+  // Calculate maximum sendable amount for a token
+  const calculateMaxSendableAmount = (token: TokenType): string => {
+    const currentBalance = getBalanceForToken(token);
+    return calculateMaxAvailable(currentBalance, token, 'TRANSFER');
+  };
+
   // Load initial data when authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -202,5 +264,9 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     transactionStats,
     refreshTransactions,
     getRecentTransactions,
+    // Validation functions
+    validateSendInputs,
+    calculateMaxSendableAmount,
+    getBalanceForToken,
   };
 };

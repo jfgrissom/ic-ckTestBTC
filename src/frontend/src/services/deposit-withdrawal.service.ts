@@ -62,7 +62,20 @@ export const withdrawTestBTC = async (address: string, amount: string): Promise<
       };
     }
 
-    const amountBigInt = BigInt(amount);
+    // Validate and convert TestBTC amount to satoshis (smallest units)
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return { success: false, error: 'Invalid amount. Please enter a valid positive number.' };
+    }
+
+    // Convert TestBTC amount to satoshis (multiply by 100,000,000)
+    const amountSatoshis = Math.floor(numAmount * 100000000);
+
+    if (amountSatoshis === 0) {
+      return { success: false, error: 'Amount too small. Minimum amount is 0.00000001 TestBTC.' };
+    }
+
+    const amountBigInt = BigInt(amountSatoshis);
     const result = await (backend as any).withdraw_testbtc(address, amountBigInt);
 
     if ('Ok' in result) {

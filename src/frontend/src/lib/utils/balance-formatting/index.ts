@@ -44,7 +44,7 @@ export const formatAmount = (amount: string): string => {
  */
 export const formatTokenBalance = (
   balance: string,
-  token: 'ICP' | 'ckTestBTC',
+  _token: 'ICP' | 'ckTestBTC',
   loading?: boolean
 ): string => {
   if (loading) return 'Loading...';

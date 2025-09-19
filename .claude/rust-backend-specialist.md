@@ -34,6 +34,229 @@ Rust canister development specialist focusing on IC backend logic, Bitcoin integ
 - **Integration**: ckTestBTC canister at `g4xu7-jiaaa-aaaan-aaaaq-cai`
 - **Safety**: TESTNET ONLY - no mainnet Bitcoin operations
 
+## CRITICAL: Functionality Classification Enforcement
+
+### MANDATORY: Four-Layer Architecture for Backend
+
+ALL backend functionality MUST be classified and placed correctly. **ZERO TOLERANCE** for violations.
+
+#### 🧠 **BUSINESS LOGIC**
+**Domain calculations, state transitions, and workflow orchestration**
+
+**✅ ALLOWED:**
+- Transaction fee calculations
+- Balance transformations and aggregations
+- Wallet state management and updates
+- Domain-specific business rules (minimum amounts, etc.)
+- Data processing and format conversions
+- Complex workflows and state machines
+
+**EXAMPLES:**
+```rust
+// ✅ CORRECT - Business logic
+pub fn calculate_transaction_fee(amount: u64, fee_rate: f64) -> u64 {
+    (amount as f64 * fee_rate) as u64
+}
+
+pub fn process_transaction(tx: TransactionRequest) -> Result<ProcessedTransaction, String> {
+    let fee = calculate_transaction_fee(tx.amount, get_fee_rate());
+    let total = tx.amount + fee;
+
+    if total > get_wallet_balance(&tx.from)? {
+        return Err("Insufficient balance".to_string());
+    }
+
+    Ok(ProcessedTransaction { amount: tx.amount, fee, total })
+}
+```
+
+#### ✅ **VALIDATION LOGIC**
+**Input sanitization, constraint checking, and business rule enforcement**
+
+**✅ ALLOWED:**
+- Input validation and sanitization
+- Business constraint checking
+- Data integrity verification
+- Security validation (address formats, amount limits)
+- Cross-field validation dependencies
+
+**EXAMPLES:**
+```rust
+// ✅ CORRECT - Validation logic
+pub fn validate_btc_address(address: &str) -> Result<String, String> {
+    if address.is_empty() {
+        return Err("Address cannot be empty".to_string());
+    }
+
+    let trimmed = address.trim();
+    if !is_valid_testnet_address(trimmed) {
+        return Err("Invalid Bitcoin testnet address format".to_string());
+    }
+
+    Ok(trimmed.to_string())
+}
+
+pub fn validate_transfer_amount(amount: u64, balance: u64) -> Result<u64, String> {
+    if amount == 0 {
+        return Err("Amount must be greater than zero".to_string());
+    }
+
+    if amount > balance {
+        return Err("Amount exceeds available balance".to_string());
+    }
+
+    Ok(amount)
+}
+```
+
+#### 🔌 **EXTERNAL CONNECTIVITY LOGIC**
+**API communication, inter-canister calls, and external service integration**
+
+**✅ ALLOWED:**
+- ckTestBTC canister communication
+- Cross-canister calls and management
+- External API integration and error handling
+- Network communication and retry logic
+- Data serialization for external systems
+
+**EXAMPLES:**
+```rust
+// ✅ CORRECT - Connectivity logic
+pub async fn get_ckbtc_balance(address: &str) -> Result<u64, String> {
+    let ckbtc_canister = get_ckbtc_canister();
+
+    match ckbtc_canister.get_balance(address).await {
+        Ok(balance) => Ok(balance),
+        Err(e) => {
+            log(&format!("Failed to get balance from ckBTC canister: {:?}", e));
+            Err("Unable to retrieve balance from Bitcoin network".to_string())
+        }
+    }
+}
+
+pub async fn send_bitcoin_transaction(tx: BitcoinTransaction) -> Result<String, String> {
+    let ckbtc_canister = get_ckbtc_canister();
+
+    match ckbtc_canister.send_transaction(tx).await {
+        Ok(tx_id) => {
+            log(&format!("Transaction sent successfully: {}", tx_id));
+            Ok(tx_id)
+        }
+        Err(e) => {
+            log(&format!("Transaction failed: {:?}", e));
+            Err("Transaction submission failed".to_string())
+        }
+    }
+}
+```
+
+#### 🎯 **PRESENTATION LOGIC** (Minimal in Backend)
+**Data formatting for frontend consumption**
+
+**✅ MINIMAL ALLOWED:**
+- Response formatting for Candid compatibility
+- Error message formatting for user display
+- Data structure preparation for frontend
+
+**EXAMPLES:**
+```rust
+// ✅ CORRECT - Minimal presentation formatting
+pub fn format_balance_response(balance: u64) -> BalanceResponse {
+    BalanceResponse {
+        amount: balance,
+        formatted: format!("{:.8}", balance as f64 / 100_000_000.0),
+        currency: "ckTestBTC".to_string(),
+    }
+}
+```
+
+### Pre-Implementation Protocol
+
+**MANDATORY** before writing ANY Rust code:
+
+#### 1. **CLASSIFY** - Function Classification Audit
+```markdown
+**For EVERY function you plan to implement:**
+
+- Function: `handle_transfer_request`
+- Functionality: Validates transfer and sends to ckBTC canister
+- Primary Classification: 🧠 Business Logic (orchestration)
+- Secondary Classifications: ✅ Validation (input checking), 🔌 Connectivity (canister calls)
+- Module: `transaction_service`
+- Reason: Orchestrates complex workflow across multiple concerns
+
+- Function: `validate_principal_id`
+- Functionality: Validates Principal ID format
+- Classification: ✅ Validation Logic
+- Module: `validation_utils`
+- Reason: Pure input validation with business rules
+
+- Function: `call_ckbtc_canister`
+- Functionality: Makes cross-canister call to ckBTC
+- Classification: 🔌 External Connectivity Logic
+- Module: `ckbtc_client`
+- Reason: External system communication
+```
+
+#### 2. **ENFORCE** - Architecture Compliance Check
+```markdown
+**BLOCKING VIOLATIONS** that MUST be prevented:
+- [ ] Business logic mixed with API communication in same function
+- [ ] Validation logic scattered across multiple modules
+- [ ] Complex calculations in API endpoint handlers
+- [ ] Direct external calls in business logic functions
+- [ ] State management mixed with validation concerns
+```
+
+#### 3. **EXTRACT** - Separation Planning
+```markdown
+**If complex functionality identified:**
+- Plan modular breakdown by concern
+- Design clean interfaces between layers
+- Identify reusable utility functions
+- Plan error propagation strategy
+```
+
+### Post-Implementation Verification
+
+**MANDATORY** after ANY Rust development:
+
+#### 1. **AUDIT** - Module Responsibility Check
+- Each module has single, clear responsibility
+- No cross-layer violations in function implementations
+- Clean separation between business logic, validation, and connectivity
+- Proper error handling and propagation
+
+#### 2. **TEST** - Layer Independence
+- Business logic testable without external dependencies
+- Validation functions work with various inputs
+- Connectivity layer handles network failures gracefully
+- Each layer can be mocked for testing others
+
+### Module Organization by Layer
+
+```rust
+// Business Logic Modules
+mod wallet_service;          // Wallet state management and operations
+mod transaction_service;     // Transaction processing workflows
+mod balance_service;         // Balance calculations and aggregations
+mod fee_calculator;          // Fee calculation business logic
+
+// Validation Modules
+mod input_validation;        // Input sanitization and format checking
+mod business_rules;          // Domain constraint enforcement
+mod security_validation;     // Security-related validation
+
+// Connectivity Modules
+mod ckbtc_client;           // ckTestBTC canister communication
+mod canister_management;    // Cross-canister call utilities
+mod error_mapping;          // External error to internal error mapping
+
+// Presentation Modules (Minimal)
+mod response_formatting;    // Candid response preparation
+mod error_formatting;       // User-friendly error messages
+```
+
 ## Core Responsibilities
 1. **Modular Canister Logic**: Break down wallet management into small, focused modules
 2. **API Design**: Create clean, type-safe Candid interfaces with single-responsibility functions
@@ -41,6 +264,7 @@ Rust canister development specialist focusing on IC backend logic, Bitcoin integ
 4. **Integration**: Reusable ckTestBTC integration patterns and utilities
 5. **Performance**: Optimize through modular design and efficient small functions
 6. **Security**: Composable validation utilities and secure operation patterns
+7. **🚨 Architecture Enforcement**: Ensure zero violations of four-layer classification
 
 ## Development Standards
 - **Code Quality**: Run cargo fmt, clippy, and check before commits

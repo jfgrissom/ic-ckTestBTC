@@ -12,15 +12,18 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
-import { formatTokenBalance, validatePrincipal } from '@/lib';
+import { formatTokenBalance, TokenType } from '@/lib';
 
 interface SendModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSend?: (token: 'ICP' | 'ckTestBTC', recipient: string, amount: string) => Promise<void>;
+  onSend?: (token: TokenType, recipient: string, amount: string) => Promise<void>;
   loading?: boolean;
   icpBalance?: string;
   ckTestBTCBalance?: string;
+  // Enhanced validation props
+  onValidate?: (recipient: string, amount: string, token: TokenType) => { valid: boolean; errors: Record<string, string>; details?: Record<string, string> };
+  onCalculateMax?: (token: TokenType) => string;
 }
 
 const SendModal: React.FC<SendModalProps> = ({
@@ -30,11 +33,14 @@ const SendModal: React.FC<SendModalProps> = ({
   loading = false,
   icpBalance = '0',
   ckTestBTCBalance = '0',
+  onValidate,
+  onCalculateMax,
 }) => {
-  const [selectedToken, setSelectedToken] = useState<'ICP' | 'ckTestBTC'>('ckTestBTC');
+  const [selectedToken, setSelectedToken] = useState<TokenType>('ckTestBTC');
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [details, setDetails] = useState<Record<string, string>>({});
 
 
   const getCurrentBalance = () => {
@@ -42,39 +48,30 @@ const SendModal: React.FC<SendModalProps> = ({
   };
 
 
+  // Validate inputs using shared validation layer via props
   const validateInputs = () => {
-    setError('');
+    setErrors({});
+    setDetails({});
 
-    if (!recipient) {
-      setError('Please enter a recipient Principal ID');
-      return false;
+    if (!onValidate) {
+      // Fallback validation if no validation function provided
+      if (!recipient) {
+        setErrors({ recipient: 'Please enter a recipient Principal ID' });
+        return false;
+      }
+      if (!amount) {
+        setErrors({ amount: 'Please enter an amount' });
+        return false;
+      }
+      return true;
     }
 
-    if (!validatePrincipal(recipient)) {
-      setError('Invalid Principal ID format');
-      return false;
-    }
-
-    if (!amount) {
-      setError('Please enter an amount');
-      return false;
-    }
-
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError('Amount must be greater than 0');
-      return false;
-    }
-
-    const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
-    if (numAmount > maxAmount) {
-      setError('Amount exceeds available balance');
-      return false;
-    }
-
-    const minAmount = selectedToken === 'ICP' ? 0.0001 : 0.00001; // Minimum amounts
-    if (numAmount < minAmount) {
-      setError(`Minimum send amount is ${minAmount} ${selectedToken}`);
+    const validationResult = onValidate(recipient, amount, selectedToken);
+    if (!validationResult.valid) {
+      setErrors(validationResult.errors);
+      if (validationResult.details) {
+        setDetails(validationResult.details);
+      }
       return false;
     }
 
@@ -85,15 +82,12 @@ const SendModal: React.FC<SendModalProps> = ({
     if (!validateInputs()) return;
 
     try {
-      // Convert amount to smallest units
-      const amountInSmallestUnits = selectedToken === 'ICP'
-        ? (parseFloat(amount) * 100000000).toString() // Convert to e8s
-        : (parseFloat(amount) * 100000000).toString(); // Convert to satoshis
-
-      await onSend?.(selectedToken, recipient, amountInSmallestUnits);
+      // Note: Amount conversion is now handled by the validation layer
+      // The parent component should handle conversion when calling onSend
+      await onSend?.(selectedToken, recipient, amount);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Send transaction failed');
+      setErrors({ general: err instanceof Error ? err.message : 'Send transaction failed' });
     }
   };
 
@@ -101,16 +95,22 @@ const SendModal: React.FC<SendModalProps> = ({
     setSelectedToken('ckTestBTC');
     setRecipient('');
     setAmount('');
-    setError('');
+    setErrors({});
+    setDetails({});
     onOpenChange(false);
   };
 
   const handleMaxClick = () => {
-    const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
-    // Reserve some for fees
-    const feeReserve = selectedToken === 'ICP' ? 0.0001 : 0.00001;
-    const availableAmount = Math.max(0, maxAmount - feeReserve);
-    setAmount(availableAmount.toFixed(8));
+    if (onCalculateMax) {
+      const maxAmount = onCalculateMax(selectedToken);
+      setAmount(maxAmount);
+    } else {
+      // Fallback calculation if no prop provided
+      const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
+      const feeReserve = selectedToken === 'ICP' ? 0.0001 : 0.00001;
+      const availableAmount = Math.max(0, maxAmount - feeReserve);
+      setAmount(availableAmount.toFixed(8));
+    }
   };
 
   const getTokenDescription = () => {
@@ -209,11 +209,34 @@ const SendModal: React.FC<SendModalProps> = ({
             />
           </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {/* Display errors */}
+          {Object.keys(errors).length > 0 && (
+            <div className="space-y-2">
+              {errors.general && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.general}</AlertDescription>
+                </Alert>
+              )}
+              {errors.recipient && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>Recipient: {errors.recipient}</AlertDescription>
+                  {details.recipient && (
+                    <p className="text-xs mt-1 opacity-80">{details.recipient}</p>
+                  )}
+                </Alert>
+              )}
+              {errors.amount && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>Amount: {errors.amount}</AlertDescription>
+                  {details.amount && (
+                    <p className="text-xs mt-1 opacity-80">{details.amount}</p>
+                  )}
+                </Alert>
+              )}
+            </div>
           )}
 
           <div className="text-xs text-gray-500 space-y-1">

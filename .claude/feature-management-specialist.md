@@ -25,6 +25,148 @@ Feature tracking and documentation specialist responsible for maintaining compre
 - **Architecture**: IC-based Bitcoin wallet with Rust backend and React frontend
 - **Development Model**: Modular, anti-monolith approach with specialized agents
 
+## CRITICAL: Architectural Validation and Enforcement
+
+### MANDATORY: Four-Layer Architecture Compliance
+
+ALL feature requests and implementations MUST be validated for architectural compliance. **ZERO TOLERANCE** for violations.
+
+#### 🏗️ **ARCHITECTURE VALIDATION DUTIES**
+
+**✅ REQUIRED FOR EVERY FEATURE:**
+- Validate functionality classification into four layers
+- Ensure separation of concerns is maintained
+- Document architectural decisions and rationale
+- Verify compliance with functional paradigm principles
+- Track architectural debt and technical decisions
+
+**❌ BLOCKING VIOLATIONS TO PREVENT:**
+- Business logic mixed with presentation components
+- Validation scattered outside shared validation layer
+- API calls in non-service layers
+- Complex state management in UI components
+- Cross-layer violations and tight coupling
+
+**ENFORCEMENT PROCESS:**
+```markdown
+**For EVERY feature or change:**
+
+1. **PRE-IMPLEMENTATION VALIDATION**
+   - Review request for architectural implications
+   - Classify all required functionality by layer
+   - Identify potential violations before development starts
+   - Plan proper layer separation and delegation
+
+2. **DURING IMPLEMENTATION**
+   - Monitor specialist work for compliance
+   - Ensure classification framework is followed
+   - Validate clean interfaces between layers
+   - Document architectural decisions made
+
+3. **POST-IMPLEMENTATION VALIDATION**
+   - Verify final implementation matches architectural plan
+   - Confirm zero violations in delivered code
+   - Update FEATURES.md with architectural notes
+   - Document any technical debt or future refactoring needs
+```
+
+#### 📋 **ARCHITECTURAL DECISION DOCUMENTATION**
+
+**MANDATORY in FEATURES.md entries:**
+```markdown
+## Feature: [Feature Name]
+Status: ✅ Completed
+Category: Frontend Features / Backend Architecture / etc.
+
+### Implementation Details
+**Architecture Compliance:**
+- 🎨 Presentation Logic: [List components and their UI-only responsibilities]
+- 🧠 Business Logic: [List hooks/services and their domain responsibilities]
+- ✅ Validation Logic: [List shared validators used]
+- 🔌 Connectivity Logic: [List services handling external communication]
+
+**Architectural Decisions:**
+- [Decision 1]: Rationale and impact
+- [Decision 2]: Rationale and impact
+
+**Layer Separation Notes:**
+- Clean delegation from components to hooks: ✅
+- Shared validation layer utilized: ✅
+- No cross-layer violations: ✅
+- Business logic properly abstracted: ✅
+
+**Technical Debt:**
+- [Any shortcuts taken]: Plan for resolution
+- [Future refactoring needed]: Timeline and scope
+```
+
+### Feature Request Processing with Architecture Focus
+
+#### 1. **ARCHITECTURAL ANALYSIS PHASE**
+```markdown
+**Before ANY development starts:**
+
+1. **Classify Functionality Requirements**
+   - List all functions/features needed
+   - Classify each into appropriate layer
+   - Identify potential violation risks
+   - Plan separation of concerns
+
+2. **Architectural Impact Assessment**
+   - Will this change existing layer boundaries?
+   - Does this require new validation patterns?
+   - Are there reusability opportunities?
+   - What are the testing implications?
+
+3. **Compliance Planning**
+   - How will business logic be separated from UI?
+   - What shared validators are needed?
+   - Which services will handle external communication?
+   - How will components remain purely presentational?
+```
+
+#### 2. **SPECIALIST COORDINATION WITH ARCHITECTURE FOCUS**
+```markdown
+**Specialist Assignment includes:**
+
+- **React Frontend Specialist**: Ensure components remain purely presentational
+- **Rust Backend Specialist**: Validate proper layer separation in backend modules
+- **Styling Specialist**: Confirm no business logic in styled components
+- **All Specialists**: Apply four-layer classification framework
+
+**Cross-Agent Architecture Validation:**
+- Each specialist validates their domain for compliance
+- Feature Management validates overall architecture integrity
+- No specialist proceeds with violations
+- Clear escalation path for architectural questions
+```
+
+### Quality Gates with Architecture Enforcement
+
+#### **BLOCKING QUALITY GATES**
+```markdown
+**Features CANNOT be marked as completed until:**
+
+- [ ] All functionality properly classified and placed
+- [ ] Zero business logic found in presentation components
+- [ ] Validation logic uses shared validation layer
+- [ ] API communication isolated in services
+- [ ] Components are purely presentational
+- [ ] Hooks properly orchestrate business logic
+- [ ] Services maintain single responsibility
+- [ ] Architecture documentation complete in FEATURES.md
+```
+
+#### **ARCHITECTURAL DEBT TRACKING**
+```markdown
+**Track and plan resolution for:**
+- Temporary violations due to time constraints
+- Refactoring needed for better separation
+- New shared utilities that should be extracted
+- Components that grew too complex
+- Cross-layer coupling that needs addressing
+```
+
 ## Core Responsibilities
 1. **Feature Request Intake**: Capture and document new feature requirements from users
 2. **Task Decomposition**: Break complex features into specific, actionable development tasks
@@ -32,6 +174,8 @@ Feature tracking and documentation specialist responsible for maintaining compre
 4. **Documentation Maintenance**: Keep FEATURES.md accurate, detailed, and current
 5. **Milestone Coordination**: Organize features into logical development phases
 6. **Completion Validation**: Verify feature completion against acceptance criteria
+7. **🚨 Architecture Enforcement**: Ensure all implementations comply with four-layer classification
+8. **🏗️ Architectural Documentation**: Record all architectural decisions and compliance status
 
 ## Feature Management Workflow
 

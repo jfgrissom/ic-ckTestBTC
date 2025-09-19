@@ -18,6 +18,10 @@ interface WithdrawModalProps {
   onWithdraw?: (address: string, amount: string) => Promise<void>;
   loading?: boolean;
   balance?: string;
+  // Enhanced validation props
+  onValidate?: (address: string, amount: string) => { valid: boolean; errors: Record<string, string>; details?: Record<string, string> };
+  onCalculateMax?: () => string;
+  onFormatBalance?: (balance: string) => string;
 }
 
 const WithdrawModal: React.FC<WithdrawModalProps> = ({
@@ -26,49 +30,47 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
   onWithdraw,
   loading = false,
   balance = '0',
+  onValidate,
+  onCalculateMax,
+  onFormatBalance,
 }) => {
   const [address, setAddress] = useState('');
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [details, setDetails] = useState<Record<string, string>>({});
 
   const formatBalance = (balance: string) => {
+    if (onFormatBalance) {
+      return onFormatBalance(balance);
+    }
+    // Fallback formatting
     const numBalance = parseFloat(balance || '0');
     return (numBalance / 100000000).toFixed(8);
   };
 
   const validateInputs = () => {
-    setError('');
+    setErrors({});
+    setDetails({});
 
-    if (!address) {
-      setError('Please enter a TestBTC address');
-      return false;
+    if (!onValidate) {
+      // Fallback validation if no validation function provided
+      if (!address) {
+        setErrors({ address: 'Please enter a TestBTC address' });
+        return false;
+      }
+      if (!amount) {
+        setErrors({ amount: 'Please enter an amount' });
+        return false;
+      }
+      return true;
     }
 
-    if (!address.match(/^(tb1|[2mn])[a-zA-Z0-9]{25,62}$/)) {
-      setError('Invalid TestBTC address format');
-      return false;
-    }
-
-    if (!amount) {
-      setError('Please enter an amount');
-      return false;
-    }
-
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError('Amount must be greater than 0');
-      return false;
-    }
-
-    const maxAmount = parseFloat(formatBalance(balance));
-    if (numAmount > maxAmount) {
-      setError('Amount exceeds available balance');
-      return false;
-    }
-
-    const minAmount = 0.00001; // 1000 satoshis
-    if (numAmount < minAmount) {
-      setError('Minimum withdrawal amount is 0.00001 TestBTC');
+    const validationResult = onValidate(address, amount);
+    if (!validationResult.valid) {
+      setErrors(validationResult.errors);
+      if (validationResult.details) {
+        setDetails(validationResult.details);
+      }
       return false;
     }
 
@@ -79,27 +81,33 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
     if (!validateInputs()) return;
 
     try {
-      // Convert amount to smallest units (satoshis)
-      const amountInSatoshis = (parseFloat(amount) * 100000000).toString();
-      await onWithdraw?.(address, amountInSatoshis);
+      // Note: Amount conversion is now handled by the validation layer
+      // The parent component should handle conversion when calling onWithdraw
+      await onWithdraw?.(address, amount);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Withdrawal failed');
+      setErrors({ general: err instanceof Error ? err.message : 'Withdrawal failed' });
     }
   };
 
   const handleClose = () => {
     setAddress('');
     setAmount('');
-    setError('');
+    setErrors({});
+    setDetails({});
     onOpenChange(false);
   };
 
   const handleMaxClick = () => {
-    const maxAmount = parseFloat(formatBalance(balance));
-    // Reserve some for fees
-    const availableAmount = Math.max(0, maxAmount - 0.00001);
-    setAmount(availableAmount.toFixed(8));
+    if (onCalculateMax) {
+      const maxAmount = onCalculateMax();
+      setAmount(maxAmount);
+    } else {
+      // Fallback calculation if no prop provided
+      const maxAmount = parseFloat(formatBalance(balance));
+      const availableAmount = Math.max(0, maxAmount - 0.00001);
+      setAmount(availableAmount.toFixed(8));
+    }
   };
 
   return (
@@ -154,11 +162,34 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             />
           </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {/* Display errors */}
+          {Object.keys(errors).length > 0 && (
+            <div className="space-y-2">
+              {errors.general && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.general}</AlertDescription>
+                </Alert>
+              )}
+              {errors.address && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>Address: {errors.address}</AlertDescription>
+                  {details.address && (
+                    <p className="text-xs mt-1 opacity-80">{details.address}</p>
+                  )}
+                </Alert>
+              )}
+              {errors.amount && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>Amount: {errors.amount}</AlertDescription>
+                  {details.amount && (
+                    <p className="text-xs mt-1 opacity-80">{details.amount}</p>
+                  )}
+                </Alert>
+              )}
+            </div>
           )}
 
           <div className="text-xs text-gray-500 space-y-1">

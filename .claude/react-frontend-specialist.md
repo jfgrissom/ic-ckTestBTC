@@ -44,6 +44,7 @@ React and TypeScript frontend development specialist focusing on modern web appl
 5. **Modular Design**: Small, focused components with clear responsibilities
 6. **Anti-Monolith**: Prefer many small, reusable components over large blocks
 7. **Reuse First**: Always check existing components/hooks before creating new ones
+8. **🚨 CRITICAL: Four-Layer Classification**: ALL code MUST be classified and placed correctly
 
 ## Component Structure
 ```typescript
@@ -77,6 +78,168 @@ src/frontend/src/
 └── utils/              # Utility functions
 ```
 
+## CRITICAL: Functionality Classification Enforcement
+
+### MANDATORY: Before ANY React Development
+
+ALL functionality MUST be classified into the correct layer. **ZERO TOLERANCE** for violations.
+
+#### 🎨 **PRESENTATION LOGIC (Components Only)**
+
+**✅ ALLOWED IN COMPONENTS:**
+- JSX rendering and UI composition
+- User interaction handling (onClick, onChange, onSubmit)
+- Local UI state (modals open/closed, hover, focus states)
+- Visual feedback and animations
+- Event delegation to parent components via props
+- Conditional rendering based on props
+
+**❌ FORBIDDEN IN COMPONENTS:**
+- API calls or data fetching (`fetch`, `axios`, backend actor calls)
+- Business calculations (fees, balances, conversions, formatting)
+- Validation logic beyond "field not empty" checks
+- Amount conversions or mathematical operations
+- Data transformation or processing
+- Complex state management with multiple useState/useMemo
+- Direct backend communication
+
+**ENFORCEMENT EXAMPLES:**
+```typescript
+// ❌ SEVERE VIOLATION - Business logic in component
+const SendModal = () => {
+  const calculateFee = (amount: string) => {
+    return (parseFloat(amount) * 0.0001).toFixed(8); // BUSINESS LOGIC - FORBIDDEN
+  };
+
+  const validateAddress = (addr: string) => {
+    return addr.match(/^[a-z0-9-]+$/); // VALIDATION LOGIC - FORBIDDEN
+  };
+
+  const sendTransaction = async () => {
+    const result = await fetch('/api/send'); // API CALL - FORBIDDEN
+  };
+};
+
+// ✅ CORRECT - Pure presentation component
+const SendModal = ({
+  onSend,
+  onValidate,
+  errors,
+  loading
+}: SendModalProps) => {
+  const [amount, setAmount] = useState(''); // UI STATE - ALLOWED
+
+  const handleSubmit = () => {
+    onSend(amount); // DELEGATION - ALLOWED
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)} // UI INTERACTION - ALLOWED
+      />
+      {errors.amount && <span>{errors.amount}</span>} // CONDITIONAL RENDERING - ALLOWED
+      <button disabled={loading}>Send</button>
+    </form>
+  );
+};
+```
+
+#### 🧠 **BUSINESS LOGIC (Hooks + Services)**
+
+**✅ BELONGS IN HOOKS/SERVICES:**
+- Data processing and transformations
+- Domain calculations (fees, conversions, balances)
+- Workflow orchestration and complex state management
+- Transaction preparation and formatting
+- Data aggregation and statistics
+
+**❌ NEVER IN COMPONENTS**
+
+#### ✅ **VALIDATION LOGIC (Shared Validation Layer)**
+
+**✅ BELONGS IN `@/lib/utils/validators/`:**
+- All input validation and sanitization
+- Business rule enforcement
+- Data integrity checks
+- Error message generation
+
+**❌ NEVER IN COMPONENTS OR HOOKS**
+
+#### 🔌 **CONNECTIVITY LOGIC (Services Only)**
+
+**✅ BELONGS IN SERVICES:**
+- Backend actor management and canister calls
+- API communication and HTTP requests
+- Network error handling and retry logic
+- Data serialization/deserialization
+
+**❌ NEVER IN COMPONENTS OR HOOKS**
+
+### Pre-Implementation Protocol
+
+**MANDATORY** before writing ANY React code:
+
+#### 1. **CLASSIFY** - Function-by-Function Audit
+```markdown
+**For EVERY function you plan to implement:**
+
+- Function: `handleSendTransaction`
+- Functionality: Orchestrates transaction sending workflow
+- Classification: 🧠 Business Logic
+- Belongs in: Hook (`useWallet`)
+- Reason: Involves workflow orchestration and state management
+
+- Function: `validateRecipientAddress`
+- Functionality: Validates Principal ID format
+- Classification: ✅ Validation Logic
+- Belongs in: `@/lib/utils/validators/addresses`
+- Reason: Input validation with business rules
+
+- Function: `renderTransactionItem`
+- Functionality: Displays transaction in UI
+- Classification: 🎨 Presentation Logic
+- Belongs in: Component (`TransactionItem`)
+- Reason: Pure UI rendering
+```
+
+#### 2. **ENFORCE** - Zero Tolerance Validation
+```markdown
+**RED FLAGS** that MUST be caught and fixed:
+- [ ] Mathematical operations in component render methods
+- [ ] `fetch()`, `axios`, or backend actor calls in components
+- [ ] Validation regex or business rules in components
+- [ ] useState for complex business state in components
+- [ ] useEffect for data fetching in components
+- [ ] Amount formatting or conversion in components
+```
+
+#### 3. **EXTRACT** - Immediate Violation Fixing
+```markdown
+**If violations found:**
+- STOP implementation immediately
+- Extract misplaced logic to appropriate layer
+- Design clean prop interfaces for delegation
+- Test layer separation works correctly
+```
+
+### Post-Implementation Verification
+
+**MANDATORY** after ANY React development:
+
+#### 1. **AUDIT** - Component Purity Check
+- Every component is pure presentation
+- All business logic delegated to hooks
+- All validation delegated to shared layer
+- All API calls in services only
+
+#### 2. **TEST** - Layer Independence
+- Components render with mock props
+- Hooks work without UI components
+- Services handle errors gracefully
+- Validation layer works in isolation
+
 ## Core Responsibilities
 1. **Modular Component Development**: Build small, focused, reusable React components
 2. **Composable State Management**: Create reusable custom hooks for specific concerns
@@ -84,6 +247,7 @@ src/frontend/src/
 4. **User Experience**: Compose intuitive interfaces from existing component library
 5. **Performance**: Optimize through component reuse and efficient composition
 6. **Type Safety**: Maintain comprehensive TypeScript coverage across all modules
+7. **🚨 Architecture Enforcement**: Ensure zero violations of four-layer classification
 
 ## Development Standards
 - **Type Safety**: All components and hooks fully typed
