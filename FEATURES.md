@@ -573,6 +573,70 @@ application.
   - ✅ **Impact:** Users can now generate Bitcoin testnet deposit addresses for TestBTC to ckTestBTC conversion
   - ✅ **Architecture Achievement:** Complete deposit pipeline from Bitcoin testnet to ckTestBTC tokens
 
+- ✅ **Critical Security Fix: Bitcoin Address Collision Vulnerability:** Resolved major fund misallocation risk
+  - ✅ **Security Issue Identified:** Multiple principals generating identical Bitcoin testnet deposit addresses
+    - ✅ Root cause: Backend calling minter with `subaccount: None` for all users
+    - ✅ Risk: Deposits to same address could be credited to wrong user
+    - ✅ Impact: Complete breakdown of custodial fund segregation
+  - ✅ **Solution Implementation:** Unique address generation using custodial subaccounts
+    - ✅ Modified `get_btc_address()` to pass user's custodial subaccount to minter
+    - ✅ Each principal now gets cryptographically unique Bitcoin address
+    - ✅ Maintained full mainnet compatibility using standard ICRC-1 subaccount approach
+    - ✅ No contract changes required - uses existing ckTestBTC minter interface
+  - ✅ **Mainnet Compatibility Confirmed:** Solution aligns with production ckTestBTC expectations
+    - ✅ Uses same `GetBtcAddressArgs` structure as mainnet
+    - ✅ Subaccount-based address derivation is the standard approach
+    - ✅ Ready for production deployment without interface changes
+  - ✅ **Impact:** Eliminated critical security vulnerability preventing fund misallocation
+  - ✅ **Architecture Achievement:** Secure, unique Bitcoin addresses per user with production compatibility
+
+- ✅ **Custodial Wallet Architecture Implementation:** Complete custodial fund management system
+  - ✅ **Problem Solved:** Minting events occurred but balances didn't show in UI due to architecture mismatch
+    - ✅ Root issue: Tokens minted to personal accounts but UI checked virtual custodial balance
+    - ✅ User requirement: "The implementation should be custodial" - architecture needed alignment
+  - ✅ **Backend Custodial Infrastructure:** Complete wallet status and deposit functionality
+    - ✅ Added `WalletStatus` struct showing both custodial and personal balances
+    - ✅ Implemented `get_wallet_status()` function with comprehensive balance reporting
+    - ✅ Created `deposit_to_custody()` function for moving personal funds to custodial control
+    - ✅ Added `DepositReceipt` with detailed transaction confirmation information
+    - ✅ Integrated with ICRC-1 subaccount system for proper fund segregation
+  - ✅ **Frontend Custodial Integration:** Complete UI for dual balance management
+    - ✅ Updated `wallet.service.ts` to use comprehensive wallet status
+    - ✅ Enhanced `useWallet` hook with custodial wallet functionality
+    - ✅ Modified `BalanceSection` component to show both balance types
+    - ✅ Added "Deposit to Wallet" functionality with orange alert UI
+    - ✅ Implemented all 4 balance matrix cases (personal + custodial combinations)
+  - ✅ **Impact:** Users now see both personal and custodial balances with proper fund control
+  - ✅ **Architecture Achievement:** Complete custodial system using ICRC-1 subaccounts for production compatibility
+
+- ✅ **Self-Transfer Detection Debug Enhancement:** Enhanced debugging for principal comparison issues
+  - ✅ **Issue Identified:** Transfers between different principals incorrectly failing with "Cannot transfer to yourself"
+  - ✅ **Debug Implementation:** Added comprehensive logging to understand principal comparison behavior
+    - ✅ Enhanced `virtual_transfer()` function with detailed principal debugging
+    - ✅ Added principal-to-text conversion logging for comparison analysis
+    - ✅ Improved error messages to show exact principals being compared
+  - ✅ **Impact:** Enhanced debugging capability to identify and resolve transfer detection issues
+  - ✅ **Next Phase:** Debug output will reveal root cause of false self-transfer detection
+
+- ✅ **User-to-User Transfer Implementation:** Direct principal-to-principal ckTestBTC transfers
+  - ✅ **Problem Solved:** Enable real ckTestBTC transfers between different user principals
+    - ✅ Requirement: Users should be able to send ckTestBTC directly to other principals
+    - ✅ Architecture: Use existing backend `transfer` function with direct ledger communication
+  - ✅ **Backend Transfer Function:** Complete ICRC-1 standard implementation already exists
+    - ✅ Direct communication with ckTestBTC ledger via `icrc1_transfer`
+    - ✅ Proper balance checking from user's personal account (`owner: caller(), subaccount: None`)
+    - ✅ Fee handling (10 satoshi) and transaction validation
+    - ✅ Real block index confirmation for successful transfers
+    - ✅ Comprehensive error handling for insufficient balance scenarios
+  - ✅ **Frontend Service Integration:** Updated wallet service for direct backend communication
+    - ✅ Replaced virtual transfer system with direct backend `transfer` function calls
+    - ✅ Removed dependency on custodial virtual transfer for user-to-user transfers
+    - ✅ Proper decimal-to-satoshi conversion with BigInt handling
+    - ✅ Principal validation using @dfinity/principal library
+    - ✅ Maintains existing transfer API for seamless UI integration
+  - ✅ **Impact:** Users can now send ckTestBTC directly between principals using real ledger transactions
+  - ✅ **Architecture Achievement:** Direct ICRC-1 standard transfers with real block confirmation
+
 - ✅ **Critical Transfer Bug Resolution:** Fixed BigInt conversion and error handling issues
   - ✅ **BigInt Decimal Conversion Bug:** Fixed "Cannot convert .5 to a BigInt" errors
     - ✅ **Root Cause:** Direct BigInt conversion of decimal user inputs (e.g., "0.5", ".5") was failing

@@ -116,22 +116,25 @@ const App: React.FC = () => {
                 <InformationTab
                   icpBalance={wallet.icpBalance}
                   ckTestBTCBalance={wallet.balance}
+                  walletStatus={wallet.walletStatus}
                   loading={wallet.loading || wallet.icpLoading}
                   onRefreshBalances={() => {
-                    wallet.refreshBalance();
+                    wallet.refreshWalletStatus();
                     wallet.refreshICPBalance();
                   }}
                   onOpenSendModal={handleOpenSendModal}
                   onOpenReceiveModal={handleOpenReceiveModal}
                   onOpenDepositModal={() => setDepositModalOpen(true)}
                   onOpenWithdrawModal={() => setWithdrawModalOpen(true)}
+                  onFaucet={wallet.handleFaucet}
+                  onDepositToCustody={wallet.handleDepositToCustody}
                 />
               </TabsContent>
 
               <TabsContent value="deposits-withdrawals" className="space-y-6">
                 <DepositsWithdrawalsTab
                   loading={wallet.loading || depositWithdrawal.loading}
-                  balance={wallet.balance}
+                  balance={wallet.walletStatus?.custodialBalance || wallet.balance}
                   depositAddress={depositAddress}
                   onGetDepositAddress={handleGetDepositAddress}
                   onFaucet={wallet.handleFaucet}
@@ -144,7 +147,7 @@ const App: React.FC = () => {
               <TabsContent value="send-receive" className="space-y-6">
                 <SendReceiveTab
                   icpBalance={wallet.icpBalance}
-                  ckTestBTCBalance={wallet.balance}
+                  ckTestBTCBalance={wallet.walletStatus?.custodialBalance || wallet.balance}
                   userPrincipal={auth.principal}
                   btcAddress={wallet.btcAddress}
                   loading={wallet.loading || wallet.icpLoading}
@@ -179,7 +182,7 @@ const App: React.FC = () => {
           onOpenChange={setWithdrawModalOpen}
           onWithdraw={handleWithdraw}
           loading={depositWithdrawal.loading}
-          balance={wallet.balance}
+          balance={wallet.walletStatus?.custodialBalance || wallet.balance}
         />
 
         <SendModal
@@ -188,7 +191,7 @@ const App: React.FC = () => {
           onSend={handleSend}
           loading={wallet.loading || wallet.icpLoading}
           icpBalance={wallet.icpBalance}
-          ckTestBTCBalance={wallet.balance}
+          ckTestBTCBalance={wallet.walletStatus?.custodialBalance || wallet.balance}
         />
 
         <ReceiveModal

@@ -55,6 +55,29 @@ integration with IC mainnet canisters.
 
 - **Send**: ICRC-1 transfers to other IC accounts
 - **Receive**: Display addresses/QR codes for incoming transfers
+
+#### Transfer Method Matrix
+
+The wallet supports two distinct transfer methods based on account ownership and balance location:
+
+| Primary Account | Sub Account | Account Balance | Send ckTestBTC via Backend Proxy | Send ckTestBTC via ckTestBTC ledger |
+| --------------- | ----------- | --------------- | -------------------------------- | ----------------------------------- |
+| Canister        | User        | Yes             | Yes                              | No                                  |
+| User            |             | Yes             | No                               | Yes                                 |
+| Canister        | User        | No              | No                               | No                                  |
+| User            |             | No              | No                               | No                                  |
+
+**Transfer Method Logic:**
+- **Backend Proxy**: Used for custodial funds (canister-controlled subaccounts)
+  - Backend canister has authority to transfer from user's custodial subaccount
+  - Enables instant transfers within the custodial system
+  - Requires registered subaccount with available balance
+- **Direct Ledger**: Used for personal funds (user-controlled accounts)
+  - User directly authorizes transfer via ICRC-1 standard
+  - Real blockchain transactions with block confirmations
+  - User maintains full control of their personal account
+- **Security**: No delegation mechanisms - each method only operates on accounts it controls
+
 - **Mint (Onboard)**: Convert **TestBTC** → ckTestBTC
   1. Get Bitcoin testnet deposit address
   2. Send **TestBTC** to address

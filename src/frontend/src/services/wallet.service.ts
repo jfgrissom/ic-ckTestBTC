@@ -2,7 +2,7 @@ import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
 // import { getAuthClient } from './auth.service'; // Currently unused
 import { getNetworkConfig } from '@/types/backend.types';
-import { getVirtualBalance as getCustodialBalance, virtualTransfer } from './custodial-wallet.service';
+import { getVirtualBalance as getCustodialBalance } from './custodial-wallet.service';
 
 // Interface for comprehensive wallet status
 export interface WalletStatus {
@@ -151,28 +151,39 @@ export const getBtcAddress = async (): Promise<{ success: boolean; address?: str
 
 /**
  * Transfer ckTestBTC to another principal
- * Uses custodial virtual transfer for instant transfers
+ * Uses direct backend transfer to ckTestBTC ledger for real transactions
  */
 export const transfer = async (
   recipientPrincipal: string,
   amount: string // Amount in ckTestBTC (decimal format like "0.5")
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
+  const backend = getBackend();
+  if (!backend) {
+    return { success: false, error: 'Backend not initialized' };
+  }
+
   try {
     // Validate principal format
     Principal.fromText(recipientPrincipal);
 
-    // Use custodial virtual transfer for instant transfers
-    const result = await virtualTransfer(recipientPrincipal, amount);
+    // Convert amount to smallest units (satoshis)
+    const amountInSatoshis = Math.floor(Number(amount) * 100000000);
 
-    if (result.success) {
+    // Use backend's direct transfer function for real ckTestBTC transactions
+    const result = await backend.transfer(
+      Principal.fromText(recipientPrincipal),
+      BigInt(amountInSatoshis)
+    );
+
+    if ('Ok' in result) {
       return {
         success: true,
-        blockIndex: result.transactionId // Virtual transfers use transaction ID instead of block index
+        blockIndex: result.Ok.toString()
       };
     } else {
       return {
         success: false,
-        error: result.error
+        error: result.Err
       };
     }
   } catch (error: any) {

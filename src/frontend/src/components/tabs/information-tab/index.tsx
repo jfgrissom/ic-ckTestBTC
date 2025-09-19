@@ -1,7 +1,9 @@
 import React from 'react';
 import TokenBalance from '@/components/shared/token-balance';
+import BalanceSection from '@/components/wallet/balance-section';
 import ActionButton from '@/components/shared/action-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { WalletStatus } from '@/services/wallet.service';
 import {
   ArrowUpDown,
   Download,
@@ -14,23 +16,29 @@ import {
 interface InformationTabProps {
   icpBalance: string;
   ckTestBTCBalance: string;
+  walletStatus?: WalletStatus;
   loading: boolean;
   onRefreshBalances: () => void;
   onOpenSendModal: (token: 'ICP' | 'ckTestBTC') => void;
   onOpenReceiveModal: (token: 'ICP' | 'ckTestBTC') => void;
   onOpenDepositModal: () => void;
   onOpenWithdrawModal: () => void;
+  onFaucet?: () => void;
+  onDepositToCustody?: (amount: string) => void;
 }
 
 const InformationTab: React.FC<InformationTabProps> = ({
   icpBalance,
   ckTestBTCBalance,
+  walletStatus,
   loading,
   onRefreshBalances,
   onOpenSendModal,
   onOpenReceiveModal,
   onOpenDepositModal,
   onOpenWithdrawModal,
+  onFaucet,
+  onDepositToCustody,
 }) => {
   return (
     <div className="space-y-6">
@@ -44,11 +52,12 @@ const InformationTab: React.FC<InformationTabProps> = ({
             loading={loading}
             onRefresh={onRefreshBalances}
           />
-          <TokenBalance
-            token="ckTestBTC"
-            balance={ckTestBTCBalance}
+          <BalanceSection
+            walletStatus={walletStatus}
             loading={loading}
-            onRefresh={onRefreshBalances}
+            onRefreshBalance={onRefreshBalances}
+            onFaucet={onFaucet}
+            onDepositToCustody={onDepositToCustody}
           />
         </div>
       </div>

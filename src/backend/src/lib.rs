@@ -783,8 +783,12 @@ async fn virtual_transfer(to_user: Principal, amount: Nat) -> Result<u64, String
 
     let amount_u64 = amount_satoshis[0];
 
+    ic_cdk::println!("[VIRTUAL_TRANSFER] DEBUG: from_user={}, to_user={}", from_user, to_user);
+    ic_cdk::println!("[VIRTUAL_TRANSFER] DEBUG: from_user.to_text()={}, to_user.to_text()={}", from_user.to_text(), to_user.to_text());
+    ic_cdk::println!("[VIRTUAL_TRANSFER] DEBUG: principals equal? {}", from_user == to_user);
+
     if from_user == to_user {
-        return Err("Cannot transfer to yourself".to_string());
+        return Err(format!("Cannot transfer to yourself: {} -> {}", from_user.to_text(), to_user.to_text()));
     }
 
     ic_cdk::println!("[VIRTUAL_TRANSFER] {} -> {}: {} satoshis", from_user, to_user, amount_u64);
@@ -1001,9 +1005,11 @@ async fn get_deposit_address() -> TextResult {
         subaccount: Option<Vec<u8>>,
     }
 
+    // Use the custodial subaccount to ensure unique addresses per user
+    let user_subaccount = generate_subaccount_for_user(caller_principal);
     let args = GetBtcAddressArgs {
         owner: Some(caller_principal),
-        subaccount: None,
+        subaccount: Some(user_subaccount),
     };
 
     // Call minter's get_btc_address function
