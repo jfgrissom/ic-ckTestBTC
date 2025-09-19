@@ -40,6 +40,31 @@ interface UseWalletReturn extends WalletState, WalletActions, TransactionState, 
   validateSendInputs: (recipient: string, amount: string, token: TokenType) => FormValidationResult<{ recipient: string; amount: string; token: TokenType }>;
   calculateMaxSendableAmount: (token: TokenType) => string;
   getBalanceForToken: (token: TokenType) => string;
+  getTransferCapabilities: () => {
+    canTransferPersonal: boolean;
+    canTransferCustodial: boolean;
+    personalBalance: string;
+    custodialBalance: string;
+    hasPersonalFunds: boolean;
+    hasCustodialFunds: boolean;
+  };
+  // Extended matrix capability functions
+  getWithdrawCapabilities: () => {
+    canWithdrawFromCustodial: boolean;
+    canWithdrawFromPersonal: boolean;
+    custodialBalance: string;
+    hasWithdrawableFunds: boolean;
+  };
+  getDepositCapabilities: () => {
+    canDepositFromCustodial: boolean;
+    canDepositFromPersonal: boolean;
+    canCreateBtcAccount: boolean;
+    canDeposit: boolean;
+    personalBalance: string;
+    custodialBalance: string;
+    requiresSubaccountCreation: boolean;
+    requiresBtcAddressCreation: boolean;
+  };
 }
 
 export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
@@ -118,7 +143,11 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     await loadBalance();
   };
 
-  const handleSend = async (recipient?: string, amount?: string): Promise<void> => {
+  const handleSend = async (
+    recipient?: string,
+    amount?: string,
+    usePersonalFunds: boolean = true
+  ): Promise<void> => {
     const finalRecipient = recipient || sendTo;
     const finalAmount = amount || sendAmount;
 
@@ -126,24 +155,28 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
 
     setLoading(true);
     try {
-      const result = await transfer(finalRecipient, finalAmount);
+      // Use dual transfer based on fund source selection
+      const result = await transfer(finalRecipient, finalAmount, !usePersonalFunds);
+
       if (result.success) {
+        const methodName = result.method === 'direct' ? 'personal funds' : 'custodial wallet';
         showError({
           title: 'Transfer Successful',
-          message: `Your ckTestBTC transfer has been completed successfully.`,
-          details: `Block index: ${result.blockIndex}`,
+          message: `Your ckTestBTC transfer from ${methodName} has been completed successfully.`,
+          details: `Block index: ${result.blockIndex} (via ${result.method} transfer)`,
           severity: 'info'
         });
         // Only clear state if we were using internal state
         if (!recipient) setSendAmount('');
         if (!amount) setSendTo('');
-        await loadBalance();
+        await loadWalletStatus();
         // Refresh transaction history after successful send
         await refreshTransactions();
       } else {
+        const methodName = result.method === 'direct' ? 'personal funds' : 'custodial wallet';
         showError({
           title: 'Transfer Failed',
-          message: 'Unable to complete the ckTestBTC transfer.',
+          message: `Unable to complete the ckTestBTC transfer from ${methodName}.`,
           details: result.error,
           severity: 'error'
         });
@@ -245,9 +278,22 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   const validateSendInputs = (
     recipient: string,
     amount: string,
-    token: TokenType
+    token: TokenType,
+    usePersonalFunds?: boolean
   ): FormValidationResult<{ recipient: string; amount: string; token: TokenType }> => {
-    const currentBalance = getBalanceForToken(token);
+    // For ckTestBTC, determine balance based on transfer method
+    let currentBalance: string;
+    if (token === 'ckTestBTC' && usePersonalFunds !== undefined && walletStatus) {
+      const formattedBalance = usePersonalFunds
+        ? walletStatus.personalBalance
+        : walletStatus.custodialBalance;
+
+      // Convert formatted balance (e.g., "1.00000000") to smallest units (e.g., "100000000")
+      // The validation function expects balance in satoshis, not formatted values
+      currentBalance = Math.floor(parseFloat(formattedBalance) * 100000000).toString();
+    } else {
+      currentBalance = getBalanceForToken(token);
+    }
 
     const rules: FormValidationRule<{ recipient: string; amount: string; token: TokenType }>[] = [
       {
@@ -273,9 +319,72 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   };
 
   // Calculate maximum sendable amount for a token
-  const calculateMaxSendableAmount = (token: TokenType): string => {
-    const currentBalance = getBalanceForToken(token);
+  const calculateMaxSendableAmount = (token: TokenType, usePersonalFunds?: boolean): string => {
+    // For ckTestBTC, determine balance based on transfer method
+    let currentBalance: string;
+    if (token === 'ckTestBTC' && usePersonalFunds !== undefined && walletStatus) {
+      const formattedBalance = usePersonalFunds
+        ? walletStatus.personalBalance
+        : walletStatus.custodialBalance;
+
+      // Convert formatted balance (e.g., "1.00000000") to smallest units (e.g., "100000000")
+      // The calculateMaxAvailable function expects balance in satoshis, not formatted values
+      currentBalance = Math.floor(parseFloat(formattedBalance) * 100000000).toString();
+    } else {
+      currentBalance = getBalanceForToken(token);
+    }
     return calculateMaxAvailable(currentBalance, token, 'TRANSFER');
+  };
+
+  // Get transfer capabilities based on balance matrix
+  const getTransferCapabilities = () => {
+    const personalBalance = walletStatus?.personalBalance || '0.00000000';
+    const custodialBalance = walletStatus?.custodialBalance || '0.00000000';
+
+    return {
+      canTransferPersonal: parseFloat(personalBalance) > 0, // Row 2: User + Balance = Direct Ledger
+      canTransferCustodial: parseFloat(custodialBalance) > 0, // Row 1: Canister + User Subaccount + Balance = Backend Proxy
+      personalBalance,
+      custodialBalance,
+      hasPersonalFunds: parseFloat(personalBalance) > 0,
+      hasCustodialFunds: parseFloat(custodialBalance) > 0,
+    };
+  };
+
+  // Get withdrawal capabilities based on matrix rules
+  const getWithdrawCapabilities = () => {
+    const personalBalance = walletStatus?.personalBalance || '0.00000000';
+    const custodialBalance = walletStatus?.custodialBalance || '0.00000000';
+
+    return {
+      // Row 1: Canister + User Subaccount + Balance = Can withdraw from custodial
+      canWithdrawFromCustodial: parseFloat(custodialBalance) > 0,
+      // Row 2: User + Balance = Cannot withdraw (no custodial access)
+      canWithdrawFromPersonal: false, // Personal funds cannot be withdrawn directly
+      custodialBalance,
+      hasWithdrawableFunds: parseFloat(custodialBalance) > 0,
+    };
+  };
+
+  // Get deposit capabilities based on matrix rules
+  const getDepositCapabilities = () => {
+    const personalBalance = walletStatus?.personalBalance || '0.00000000';
+    const custodialBalance = walletStatus?.custodialBalance || '0.00000000';
+
+    return {
+      // Row 1: Canister + User Subaccount + Balance = Can deposit (already has subaccount)
+      canDepositFromCustodial: parseFloat(custodialBalance) > 0,
+      // Row 2: User + Balance = Can deposit (will create custodial subaccount)
+      canDepositFromPersonal: parseFloat(personalBalance) > 0,
+      // Row 3: Canister + User Subaccount + No Balance = Can deposit (will create BTC address)
+      canCreateBtcAccount: parseFloat(custodialBalance) === 0 && parseFloat(personalBalance) === 0,
+      // Row 4: User + No Balance = Cannot deposit
+      canDeposit: parseFloat(personalBalance) > 0 || parseFloat(custodialBalance) >= 0, // Allow deposit if any account exists
+      personalBalance,
+      custodialBalance,
+      requiresSubaccountCreation: parseFloat(personalBalance) > 0 && parseFloat(custodialBalance) === 0,
+      requiresBtcAddressCreation: parseFloat(personalBalance) === 0 && parseFloat(custodialBalance) === 0,
+    };
   };
 
   // Load initial data when authenticated
@@ -322,5 +431,9 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     validateSendInputs,
     calculateMaxSendableAmount,
     getBalanceForToken,
+    getTransferCapabilities,
+    // New capability functions for extended matrix
+    getWithdrawCapabilities,
+    getDepositCapabilities,
   };
 };

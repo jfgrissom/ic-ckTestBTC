@@ -489,9 +489,28 @@ async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
         Err(e) => return Err(format!("Failed to check balance: {:?}", e)),
     };
 
-    // Check if user has enough balance (amount + fee)
+    // Smart amount calculation for max deposit scenario
     let fee = Nat::from(10u64);
-    let total_needed = amount.clone() + fee.clone();
+
+    // Calculate maximum transferable amount (balance - fee)
+    let max_transferable = if personal_balance > fee {
+        personal_balance.clone() - fee.clone()
+    } else {
+        Nat::from(0u64)
+    };
+
+    // Determine actual amount to transfer
+    let actual_amount = if amount > max_transferable {
+        // User is trying to deposit more than possible, use max available
+        ic_cdk::println!("[DEPOSIT_TO_CUSTODY] Adjusting amount from {} to max available: {}", amount, max_transferable);
+        max_transferable.clone()
+    } else {
+        // User specified a valid amount, use it as-is
+        amount.clone()
+    };
+
+    // Verify user has enough for the actual amount + fee
+    let total_needed = actual_amount.clone() + fee.clone();
     if personal_balance < total_needed {
         return Err(format!(
             "Insufficient personal balance. Balance: {} satoshis, Needed: {} satoshis (including 10 satoshi fee)",
@@ -508,7 +527,7 @@ async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
     let transfer_args = TransferArgs {
         from_subaccount: None,  // User's default account
         to: custodial_account.clone(),
-        amount: amount.clone(),
+        amount: actual_amount.clone(),
         fee: Some(fee),
         memo: None,
         created_at_time: Some(ic_cdk::api::time()),
@@ -564,7 +583,7 @@ async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
     store_transaction(
         TransactionType::Deposit,
         "ckTestBTC".to_string(),
-        amount.clone(),
+        actual_amount.clone(),
         caller_principal.to_text(),
         "Custodial Wallet".to_string(),
         TransactionStatus::Confirmed,
@@ -573,7 +592,7 @@ async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
 
     Ok(DepositReceipt {
         block_index,
-        amount_deposited: amount,
+        amount_deposited: actual_amount,
         new_custodial_balance,
         remaining_personal_balance,
     })

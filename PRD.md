@@ -58,17 +58,19 @@ integration with IC mainnet canisters.
 
 #### Transfer Method Matrix
 
-The wallet supports two distinct transfer methods based on account ownership and balance location:
+The wallet supports multiple operations based on account ownership and balance location:
 
-| Primary Account | Sub Account | Account Balance | Send ckTestBTC via Backend Proxy | Send ckTestBTC via ckTestBTC ledger |
-| --------------- | ----------- | --------------- | -------------------------------- | ----------------------------------- |
-| Canister        | User        | Yes             | Yes                              | No                                  |
-| User            |             | Yes             | No                               | Yes                                 |
-| Canister        | User        | No              | No                               | No                                  |
-| User            |             | No              | No                               | No                                  |
+| Primary Account | Sub Account | Account Balance | Send ckTestBTC via Backend Custodian | Send ckTestBTC via ckTestBTC ledger | Withdraw from Backend Custodian | Deposit to Backend Custodian                              |
+| --------------- | ----------- | --------------- | ------------------------------------ | ----------------------------------- | ------------------------------- | --------------------------------------------------------- |
+| Canister        | User        | Yes             | Yes                                  | No                                  | Yes                             | Yes                                                       |
+| User            |             | Yes             | No                                   | Yes                                 | No                              | Yes (caveat: Custodial Sub Account must be created first) |
+| Canister        | User        | No              | No                                   | No                                  | No                              | Yes (caveat: BTC TestNet account must be created first)   |
+| User            |             | No              | No                                   | No                                  | No                              | No                                                        |
 
-**Transfer Method Logic:**
-- **Backend Proxy**: Used for custodial funds (canister-controlled subaccounts)
+**Operation Method Logic:**
+
+**Send Operations:**
+- **Backend Custodian**: Used for custodial funds (canister-controlled subaccounts)
   - Backend canister has authority to transfer from user's custodial subaccount
   - Enables instant transfers within the custodial system
   - Requires registered subaccount with available balance
@@ -76,7 +78,21 @@ The wallet supports two distinct transfer methods based on account ownership and
   - User directly authorizes transfer via ICRC-1 standard
   - Real blockchain transactions with block confirmations
   - User maintains full control of their personal account
-- **Security**: No delegation mechanisms - each method only operates on accounts it controls
+
+**Withdrawal Operations:**
+- **Backend Custodian Only**: Only custodial funds can be withdrawn to Bitcoin testnet
+  - Converts ckTestBTC from custodial balance to TestBTC on Bitcoin testnet
+  - Requires custodial subaccount with available balance
+  - Personal funds must be deposited to custodial first before withdrawal
+
+**Deposit Operations:**
+- **To Backend Custodian**: Moves personal funds into custodial management
+  - Row 1: Direct deposit from existing personal balance
+  - Row 2: Creates custodial subaccount, then deposits personal funds
+  - Row 3: Creates Bitcoin testnet address, enables future TestBTC deposits
+  - Row 4: No operation possible (no funds available)
+
+**Security**: No delegation mechanisms - each method only operates on accounts it controls
 
 - **Mint (Onboard)**: Convert **TestBTC** → ckTestBTC
   1. Get Bitcoin testnet deposit address

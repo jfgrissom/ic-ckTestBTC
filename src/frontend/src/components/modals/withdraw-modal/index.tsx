@@ -10,7 +10,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle, Building2, Wallet } from 'lucide-react';
+
+interface WithdrawCapabilities {
+  canWithdrawFromCustodial: boolean;
+  canWithdrawFromPersonal: boolean;
+  custodialBalance: string;
+  hasWithdrawableFunds: boolean;
+}
 
 interface WithdrawModalProps {
   open: boolean;
@@ -22,6 +30,8 @@ interface WithdrawModalProps {
   onValidate?: (address: string, amount: string) => { valid: boolean; errors: Record<string, string>; details?: Record<string, string> };
   onCalculateMax?: () => string;
   onFormatBalance?: (balance: string) => string;
+  // Matrix-aware capabilities
+  withdrawCapabilities?: WithdrawCapabilities;
 }
 
 const WithdrawModal: React.FC<WithdrawModalProps> = ({
@@ -33,6 +43,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
   onValidate,
   onCalculateMax,
   onFormatBalance,
+  withdrawCapabilities,
 }) => {
   const [address, setAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -48,9 +59,20 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
     return (numBalance / 100000000).toFixed(8);
   };
 
+  const getCurrentBalance = () => {
+    // Use custodial balance for withdrawals (matrix rule: only custodial funds can be withdrawn)
+    return withdrawCapabilities?.custodialBalance || balance;
+  };
+
   const validateInputs = () => {
     setErrors({});
     setDetails({});
+
+    // Matrix-aware validation: check withdrawal capabilities first
+    if (withdrawCapabilities && !withdrawCapabilities.canWithdrawFromCustodial) {
+      setErrors({ general: 'No custodial funds available for withdrawal. Deposit personal funds to custodial wallet first.' });
+      return false;
+    }
 
     if (!onValidate) {
       // Fallback validation if no validation function provided
@@ -103,8 +125,9 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
       const maxAmount = onCalculateMax();
       setAmount(maxAmount);
     } else {
-      // Fallback calculation if no prop provided
-      const maxAmount = parseFloat(formatBalance(balance));
+      // Fallback calculation using custodial balance
+      const currentBalance = getCurrentBalance();
+      const maxAmount = parseFloat(formatBalance(currentBalance));
       const availableAmount = Math.max(0, maxAmount - 0.00001);
       setAmount(availableAmount.toFixed(8));
     }
@@ -121,6 +144,39 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Withdrawal Capability Status */}
+          {withdrawCapabilities && (
+            <div className="p-3 bg-gray-50 rounded-lg border">
+              <div className="flex items-center space-x-2 mb-2">
+                <Building2 className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Withdrawal Source</span>
+              </div>
+              {withdrawCapabilities.canWithdrawFromCustodial ? (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Custodial Wallet</span>
+                  <Badge variant="outline" className="text-green-600 border-green-200">
+                    {formatBalance(withdrawCapabilities.custodialBalance)} ckTestBTC
+                  </Badge>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Custodial Wallet</span>
+                    <Badge variant="outline" className="text-gray-400">
+                      0.00000000 ckTestBTC
+                    </Badge>
+                  </div>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      No custodial funds available. Only custodial funds can be withdrawn to Bitcoin testnet.
+                      Use "Deposit to Wallet" to move personal funds into custodial management first.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">
               TestBTC Address
@@ -140,12 +196,13 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 Amount (ckTestBTC)
               </label>
               <div className="text-xs text-gray-500">
-                Balance: {formatBalance(balance)} ckTestBTC
+                Custodial Balance: {formatBalance(getCurrentBalance())} ckTestBTC
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleMaxClick}
                   className="ml-1 h-6 px-2 text-xs"
+                  disabled={!withdrawCapabilities?.canWithdrawFromCustodial}
                 >
                   Max
                 </Button>
@@ -155,10 +212,11 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
               type="number"
               step="0.00000001"
               min="0.00001"
-              max={formatBalance(balance)}
+              max={formatBalance(getCurrentBalance())}
               placeholder="0.00000000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={!withdrawCapabilities?.canWithdrawFromCustodial}
             />
           </div>
 
@@ -205,7 +263,12 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
           </Button>
           <Button
             onClick={handleWithdraw}
-            disabled={loading || !address || !amount}
+            disabled={
+              loading ||
+              !address ||
+              !amount ||
+              (withdrawCapabilities && !withdrawCapabilities.canWithdrawFromCustodial)
+            }
           >
             {loading ? 'Processing...' : 'Withdraw'}
           </Button>

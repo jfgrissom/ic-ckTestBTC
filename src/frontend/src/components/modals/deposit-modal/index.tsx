@@ -7,8 +7,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import QRCode from '@/components/shared/qr-code';
-import { Copy, CheckCircle } from 'lucide-react';
+import { Copy, CheckCircle, AlertCircle, Wallet, Building2, Bitcoin } from 'lucide-react';
+
+interface DepositCapabilities {
+  canDepositFromCustodial: boolean;
+  canDepositFromPersonal: boolean;
+  canCreateBtcAccount: boolean;
+  canDeposit: boolean;
+  personalBalance: string;
+  custodialBalance: string;
+  requiresSubaccountCreation: boolean;
+  requiresBtcAddressCreation: boolean;
+}
 
 interface DepositModalProps {
   open: boolean;
@@ -16,6 +29,9 @@ interface DepositModalProps {
   onGetDepositAddress?: () => Promise<string>;
   depositAddress?: string;
   loading?: boolean;
+  // Matrix-aware capabilities
+  depositCapabilities?: DepositCapabilities;
+  onDepositToCustody?: (amount: string) => Promise<void>;
 }
 
 const DepositModal: React.FC<DepositModalProps> = ({
@@ -24,6 +40,8 @@ const DepositModal: React.FC<DepositModalProps> = ({
   onGetDepositAddress,
   depositAddress = '',
   loading = false,
+  depositCapabilities,
+  onDepositToCustody,
 }) => {
   const [address, setAddress] = useState(depositAddress);
   const [copied, setCopied] = useState(false);
@@ -62,6 +80,68 @@ const DepositModal: React.FC<DepositModalProps> = ({
             Send TestBTC to this address to deposit ckTestBTC to your wallet.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Deposit Capability Status */}
+          {depositCapabilities && (
+            <div className="p-3 bg-gray-50 rounded-lg border">
+              <div className="flex items-center space-x-2 mb-3">
+                <Bitcoin className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium text-gray-700">Deposit Options</span>
+              </div>
+
+              <div className="space-y-2">
+                {/* Personal to Custodial Deposit */}
+                {depositCapabilities.canDepositFromPersonal && (
+                  <div className="flex items-center justify-between p-2 bg-white rounded border">
+                    <div className="flex items-center space-x-2">
+                      <Wallet className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm">Personal → Custodial</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-blue-600">
+                        {depositCapabilities.personalBalance} ckTestBTC
+                      </Badge>
+                      {depositCapabilities.requiresSubaccountCreation && (
+                        <Badge variant="secondary" className="text-xs">
+                          Creates Account
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bitcoin Testnet Deposit */}
+                <div className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div className="flex items-center space-x-2">
+                    <Bitcoin className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm">Bitcoin Testnet → Custodial</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {depositCapabilities.requiresBtcAddressCreation && (
+                      <Badge variant="secondary" className="text-xs">
+                        Creates BTC Address
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-green-600">
+                      Available
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* No deposit options */}
+                {!depositCapabilities.canDeposit && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      No deposit options available. Use the faucet to get test tokens first.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col items-center space-y-4">
           {(loading || addressLoading) ? (

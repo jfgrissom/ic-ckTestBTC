@@ -33,10 +33,7 @@ const App: React.FC = () => {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
-  const [sendModalToken, setSendModalToken] = useState<'ICP' | 'ckTestBTC'>('ckTestBTC');
-  const [receiveModalToken, setReceiveModalToken] = useState<'ICP' | 'ckTestBTC'>('ckTestBTC');
-
-  // Modal token states are managed for send/receive functionality
+  // Modal token selection is handled by the modal handlers
 
   // Deposit address state
   const [depositAddress, setDepositAddress] = useState<string>('');
@@ -45,13 +42,13 @@ const App: React.FC = () => {
   const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
   // Modal handlers
-  const handleOpenSendModal = (token: 'ICP' | 'ckTestBTC') => {
-    setSendModalToken(token);
+  const handleOpenSendModal = (_token: 'ICP' | 'ckTestBTC') => {
+    // Token selection is handled within the modal component
     setSendModalOpen(true);
   };
 
-  const handleOpenReceiveModal = (token: 'ICP' | 'ckTestBTC') => {
-    setReceiveModalToken(token);
+  const handleOpenReceiveModal = (_token: 'ICP' | 'ckTestBTC') => {
+    // Token selection is handled within the modal component
     setReceiveModalOpen(true);
   };
 
@@ -64,14 +61,15 @@ const App: React.FC = () => {
     throw new Error(result.error || 'Failed to get deposit address');
   };
 
-  const handleSend = async (token: 'ICP' | 'ckTestBTC', recipient: string, amount: string): Promise<void> => {
+  const handleSend = async (token: 'ICP' | 'ckTestBTC', recipient: string, amount: string, usePersonalFunds?: boolean): Promise<void> => {
     if (token === 'ICP') {
       const result = await wallet.transferICP(recipient, amount);
       if (!result.success) {
         throw new Error(result.error || 'ICP transfer failed');
       }
     } else {
-      await wallet.handleSend(recipient, amount);
+      // Use the dual-transfer method for ckTestBTC
+      await wallet.handleSend(recipient, amount, usePersonalFunds ?? true);
     }
   };
 
@@ -115,7 +113,7 @@ const App: React.FC = () => {
               <TabsContent value="information" className="space-y-6">
                 <InformationTab
                   icpBalance={wallet.icpBalance}
-                  ckTestBTCBalance={wallet.balance}
+                  ckTestBTCBalance={wallet.walletStatus?.totalAvailable || wallet.balance}
                   walletStatus={wallet.walletStatus}
                   loading={wallet.loading || wallet.icpLoading}
                   onRefreshBalances={() => {
@@ -147,7 +145,7 @@ const App: React.FC = () => {
               <TabsContent value="send-receive" className="space-y-6">
                 <SendReceiveTab
                   icpBalance={wallet.icpBalance}
-                  ckTestBTCBalance={wallet.walletStatus?.custodialBalance || wallet.balance}
+                  ckTestBTCBalance={wallet.walletStatus?.totalAvailable || wallet.balance}
                   userPrincipal={auth.principal}
                   btcAddress={wallet.btcAddress}
                   loading={wallet.loading || wallet.icpLoading}
@@ -175,6 +173,8 @@ const App: React.FC = () => {
           onGetDepositAddress={handleGetDepositAddress}
           depositAddress={depositAddress}
           loading={depositWithdrawal.loading}
+          depositCapabilities={wallet.getDepositCapabilities()}
+          onDepositToCustody={wallet.handleDepositToCustody}
         />
 
         <WithdrawModal
@@ -183,6 +183,7 @@ const App: React.FC = () => {
           onWithdraw={handleWithdraw}
           loading={depositWithdrawal.loading}
           balance={wallet.walletStatus?.custodialBalance || wallet.balance}
+          withdrawCapabilities={wallet.getWithdrawCapabilities()}
         />
 
         <SendModal
@@ -191,7 +192,10 @@ const App: React.FC = () => {
           onSend={handleSend}
           loading={wallet.loading || wallet.icpLoading}
           icpBalance={wallet.icpBalance}
-          ckTestBTCBalance={wallet.walletStatus?.custodialBalance || wallet.balance}
+          ckTestBTCBalance={wallet.walletStatus?.totalAvailable || wallet.balance}
+          transferCapabilities={wallet.getTransferCapabilities()}
+          onValidate={wallet.validateSendInputs}
+          onCalculateMax={wallet.calculateMaxSendableAmount}
         />
 
         <ReceiveModal

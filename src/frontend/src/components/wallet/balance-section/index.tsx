@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RefreshCw, Coins, ArrowDown, Info } from 'lucide-react';
 import { WalletStatus } from '@/services/wallet.service';
+import { calculateMaxAvailable, TokenType } from '@/lib';
 
 interface BalanceSectionProps {
   walletStatus?: WalletStatus;
@@ -26,7 +27,17 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
 }) => {
   const handleDepositMax = () => {
     if (walletStatus?.personalBalance && onDepositToCustody) {
-      onDepositToCustody(walletStatus.personalBalance);
+      // Convert personal balance to smallest units for calculation
+      const personalBalanceInSatoshis = Math.floor(parseFloat(walletStatus.personalBalance) * 100000000).toString();
+
+      // Calculate maximum available amount (balance - fees)
+      const maxAvailableAmount = calculateMaxAvailable(
+        personalBalanceInSatoshis,
+        'ckTestBTC' as TokenType,
+        'TRANSFER'
+      );
+
+      onDepositToCustody(maxAvailableAmount);
     }
   };
 

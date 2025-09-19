@@ -151,25 +151,50 @@ export const getBtcAddress = async (): Promise<{ success: boolean; address?: str
 
 /**
  * Transfer ckTestBTC to another principal
- * Uses direct backend transfer to ckTestBTC ledger for real transactions
+ * Implements dual-transfer architecture based on account ownership matrix
  */
 export const transfer = async (
   recipientPrincipal: string,
-  amount: string // Amount in ckTestBTC (decimal format like "0.5")
-): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
-  const backend = getBackend();
-  if (!backend) {
-    return { success: false, error: 'Backend not initialized' };
-  }
-
+  amount: string, // Amount in ckTestBTC (decimal format like "0.5")
+  transferFromCustodial: boolean = false // Whether to use custodial funds
+): Promise<{ success: boolean; blockIndex?: string; error?: string; method?: string }> => {
   try {
     // Validate principal format
     Principal.fromText(recipientPrincipal);
 
+    if (transferFromCustodial) {
+      // Row 1: Custodial funds (Canister Primary + User Subaccount)
+      return await transferViaCustodialProxy(recipientPrincipal, amount);
+    } else {
+      // Row 2: Personal funds (User Primary + No Subaccount)
+      return await transferViaDirectLedger(recipientPrincipal, amount);
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Transfer failed',
+    };
+  }
+};
+
+/**
+ * Transfer via backend proxy (for custodial funds)
+ * Used when: Canister Primary + User Subaccount + Balance Available
+ */
+const transferViaCustodialProxy = async (
+  recipientPrincipal: string,
+  amount: string
+): Promise<{ success: boolean; blockIndex?: string; error?: string; method: string }> => {
+  const backend = getBackend();
+  if (!backend) {
+    return { success: false, error: 'Backend not initialized', method: 'custodial' };
+  }
+
+  try {
     // Convert amount to smallest units (satoshis)
     const amountInSatoshis = Math.floor(Number(amount) * 100000000);
 
-    // Use backend's direct transfer function for real ckTestBTC transactions
+    // Use backend's transfer function for custodial funds
     const result = await backend.transfer(
       Principal.fromText(recipientPrincipal),
       BigInt(amountInSatoshis)
@@ -178,18 +203,51 @@ export const transfer = async (
     if ('Ok' in result) {
       return {
         success: true,
-        blockIndex: result.Ok.toString()
+        blockIndex: result.Ok.toString(),
+        method: 'custodial'
       };
     } else {
       return {
         success: false,
-        error: result.Err
+        error: result.Err,
+        method: 'custodial'
       };
     }
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Transfer failed'
+      error: error.message || 'Custodial transfer failed',
+      method: 'custodial'
+    };
+  }
+};
+
+/**
+ * Transfer via direct ledger (for personal funds)
+ * Used when: User Primary + No Subaccount + Balance Available
+ */
+const transferViaDirectLedger = async (
+  recipientPrincipal: string,
+  amount: string
+): Promise<{ success: boolean; blockIndex?: string; error?: string; method: string }> => {
+  try {
+    // Import ledger service dynamically to avoid circular dependencies
+    const { transferViaLedger } = await import('./ledger.service');
+
+    const result = await transferViaLedger(
+      Principal.fromText(recipientPrincipal),
+      amount
+    );
+
+    return {
+      ...result,
+      method: 'direct'
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Direct transfer failed',
+      method: 'direct'
     };
   }
 };
