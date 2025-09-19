@@ -2,11 +2,28 @@ import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
 // import { getAuthClient } from './auth.service'; // Currently unused
 import { getNetworkConfig } from '@/types/backend.types';
+import { getVirtualBalance as getCustodialBalance, virtualTransfer } from './custodial-wallet.service';
 
 /**
  * Get wallet balance
+ * Now supports both virtual balance (custodial) and traditional balance
  */
-export const getBalance = async (): Promise<{ success: boolean; balance?: string; error?: string }> => {
+export const getBalance = async (useVirtualBalance: boolean = true): Promise<{ success: boolean; balance?: string; error?: string }> => {
+  // For custodial wallet, use virtual balance
+  if (useVirtualBalance) {
+    try {
+      const virtualResult = await getCustodialBalance();
+      if (virtualResult.success) {
+        return { success: true, balance: virtualResult.balance };
+      }
+      // If virtual balance fails, fall back to traditional balance
+      console.warn('[Wallet Service] Virtual balance failed, falling back to traditional balance:', virtualResult.error);
+    } catch (error) {
+      console.warn('[Wallet Service] Virtual balance error, falling back to traditional balance:', error);
+    }
+  }
+
+  // Traditional balance (direct from ckTestBTC ledger)
   const backend = getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
@@ -50,110 +67,35 @@ export const getBtcAddress = async (): Promise<{ success: boolean; address?: str
 
 /**
  * Transfer ckTestBTC to another principal
- * Now uses direct ledger transfer (ICRC-1 standard)
+ * Uses custodial virtual transfer for instant transfers
  */
 export const transfer = async (
   recipientPrincipal: string,
   amount: string // Amount in ckTestBTC (decimal format like "0.5")
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
-  const backend = getBackend();
-  if (!backend) {
-    return { success: false, error: 'Backend service not available' };
-  }
-
   try {
-    const toPrincipal = Principal.fromText(recipientPrincipal);
+    // Validate principal format
+    Principal.fromText(recipientPrincipal);
 
-    // Validate and convert ckTestBTC amount to satoshis
-    const numAmount = Number(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      return { success: false, error: 'Invalid amount. Please enter a valid positive number.' };
-    }
+    // Use custodial virtual transfer for instant transfers
+    const result = await virtualTransfer(recipientPrincipal, amount);
 
-    // Convert ckTestBTC amount to satoshis (multiply by 100,000,000)
-    const amountSatoshis = Math.floor(numAmount * 100000000);
-
-    if (amountSatoshis === 0) {
-      return { success: false, error: 'Amount too small. Minimum amount is 0.00000001 ckTestBTC.' };
-    }
-
-    console.log('[Wallet Service] Initiating backend proxy transfer:', {
-      recipient: recipientPrincipal,
-      amountCkTestBTC: amount,
-      amountSatoshis: amountSatoshis
-    });
-
-    // Debug: Check current balance before transfer
-    try {
-      const balanceResult = await backend.get_balance();
-      console.log('[Wallet Service] Current backend balance before transfer:', balanceResult);
-    } catch (balanceError) {
-      console.warn('[Wallet Service] Could not check balance before transfer:', balanceError);
-    }
-
-    // Use backend proxy for transfer - backend handles transaction history
-    const result = await backend.transfer(toPrincipal, BigInt(amountSatoshis));
-
-    console.log('[Wallet Service] Transfer result from backend:', result);
-
-    // Handle different possible result formats
-    if (typeof result === 'object' && result !== null) {
-      // Check for error response first
-      if ('Err' in result) {
-        console.error('[Wallet Service] Transfer failed with error:', result.Err);
-        return {
-          success: false,
-          error: String(result.Err)
-        };
-      }
-
-      // Handle success response
-      if ('Ok' in result) {
-        const blockIndex = String(result.Ok);
-        console.log('[Wallet Service] Transfer successful, block index:', blockIndex);
-        return {
-          success: true,
-          blockIndex
-        };
-      }
-
-      // Handle other success formats
-      if ('blockIndex' in result) {
-        const blockIndex = String(result.blockIndex);
-        console.log('[Wallet Service] Transfer successful, block index:', blockIndex);
-        return {
-          success: true,
-          blockIndex
-        };
-      }
-
-      if ('block_index' in result) {
-        const blockIndex = String(result.block_index);
-        console.log('[Wallet Service] Transfer successful, block index:', blockIndex);
-        return {
-          success: true,
-          blockIndex
-        };
-      }
-
-      // If it's an object but doesn't have expected fields, treat as error
-      console.error('[Wallet Service] Unexpected result format:', result);
-      return {
-        success: false,
-        error: `Unexpected response format: ${JSON.stringify(result)}`
-      };
-    } else {
-      // If result is a primitive type (number, bigint, string), treat as block index
-      const blockIndex = String(result);
-      console.log('[Wallet Service] Transfer successful, block index:', blockIndex);
+    if (result.success) {
       return {
         success: true,
-        blockIndex
+        blockIndex: result.transactionId // Virtual transfers use transaction ID instead of block index
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error
       };
     }
   } catch (error: any) {
-    console.error('[Wallet Service] Transfer error:', error);
-    return { success: false, error: error.message || 'Transfer failed' };
+    return {
+      success: false,
+      error: error.message || 'Transfer failed'
+    };
   }
 };
 

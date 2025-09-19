@@ -10,6 +10,12 @@ use serde::Serialize;
 use sha2::{Sha256, Digest};
 use std::cell::RefCell;
 
+// Stable memory imports
+use ic_stable_structures::{
+    DefaultMemoryImpl, StableBTreeMap, StableVec, Storable,
+};
+use std::borrow::Cow;
+
 // Define a specific Result type for string operations 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub enum TextResult {
@@ -47,10 +53,105 @@ pub struct Transaction {
     pub block_index: Option<Nat>,
 }
 
-// Storage for transaction history
+// Custodial transaction with virtual balance support
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct CustodialTransaction {
+    pub id: u64,
+    pub tx_type: TransactionType,
+    pub from_user: Option<Principal>,
+    pub to_user: Option<Principal>,
+    pub virtual_amount: Option<u64>,    // Virtual balance change in satoshis
+    pub on_chain_amount: Option<Nat>,   // Actual ledger transaction
+    pub block_index: Option<Nat>,       // On-chain block reference
+    pub status: TransactionStatus,
+    pub timestamp: u64,
+}
+
+// Reserve status for backend solvency monitoring
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct ReserveStatus {
+    pub total_virtual_balances: u64,  // Sum of all user virtual balances
+    pub backend_actual_balance: u64,  // Actual ckTestBTC held by backend
+    pub reserve_ratio: f64,           // actual / virtual (should be >= 1.0)
+    pub is_solvent: bool,             // backend_actual >= total_virtual
+}
+
+// Wrapper for Principal to implement Storable (orphan rule workaround)
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StorablePrincipal(pub Principal);
+
+impl From<Principal> for StorablePrincipal {
+    fn from(p: Principal) -> Self {
+        StorablePrincipal(p)
+    }
+}
+
+impl From<StorablePrincipal> for Principal {
+    fn from(sp: StorablePrincipal) -> Self {
+        sp.0
+    }
+}
+
+// Stable memory implementations for StorablePrincipal
+impl Storable for StorablePrincipal {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.0.as_slice())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        StorablePrincipal(Principal::from_slice(&bytes))
+    }
+
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Bounded {
+        max_size: 29,
+        is_fixed_size: false,
+    };
+}
+
+// Stable memory implementations for CustodialTransaction
+impl Storable for CustodialTransaction {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        let bytes = candid::encode_one(self).expect("Failed to encode CustodialTransaction");
+        Cow::Owned(bytes)
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        candid::decode_one(&bytes).expect("Failed to decode CustodialTransaction")
+    }
+
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Bounded {
+        max_size: 1024,
+        is_fixed_size: false,
+    };
+}
+
+// Storage for transaction history (legacy thread-local)
 thread_local! {
     static TRANSACTIONS: RefCell<Vec<Transaction>> = RefCell::new(Vec::new());
     static TRANSACTION_COUNTER: RefCell<u64> = RefCell::new(0);
+}
+
+// Stable memory storage for custodial architecture
+thread_local! {
+    static MEMORY: RefCell<DefaultMemoryImpl> = RefCell::new(DefaultMemoryImpl::default());
+
+    // User virtual balances (StorablePrincipal -> balance in satoshis)
+    static USER_BALANCES: RefCell<StableBTreeMap<StorablePrincipal, u64, DefaultMemoryImpl>> = RefCell::new(
+        StableBTreeMap::init(MEMORY.with(|m| m.borrow().clone()))
+    );
+
+    // User deposit addresses (StorablePrincipal -> Bitcoin testnet address)
+    static USER_DEPOSIT_ADDRESSES: RefCell<StableBTreeMap<StorablePrincipal, String, DefaultMemoryImpl>> = RefCell::new(
+        StableBTreeMap::init(MEMORY.with(|m| m.borrow().clone()))
+    );
+
+    // Custodial transactions in stable memory
+    static STABLE_TRANSACTIONS: RefCell<StableVec<CustodialTransaction, DefaultMemoryImpl>> = RefCell::new(
+        StableVec::init(MEMORY.with(|m| m.borrow().clone())).expect("Failed to init stable transactions")
+    );
+
+    // Transaction counter for stable transactions
+    static STABLE_TRANSACTION_COUNTER: RefCell<u64> = RefCell::new(0);
 }
 
 // Get canister IDs from environment variables at compile time, with fallbacks
@@ -211,6 +312,380 @@ async fn get_balance() -> Result<Nat, String> {
 // The frontend now calls the ckTestBTC ledger directly for transfers
 // to maintain compatibility with the IC mainnet implementation.
 // The backend only handles wallet-specific features like transaction history.
+
+// ============================================================
+// CUSTODIAL WALLET FUNCTIONS - Virtual Balance Management
+// ============================================================
+
+// Helper to store a custodial transaction
+fn store_custodial_transaction(
+    tx_type: TransactionType,
+    from_user: Option<Principal>,
+    to_user: Option<Principal>,
+    virtual_amount: Option<u64>,
+    on_chain_amount: Option<Nat>,
+    status: TransactionStatus,
+    block_index: Option<Nat>,
+) -> u64 {
+    STABLE_TRANSACTION_COUNTER.with(|counter| {
+        let mut c = counter.borrow_mut();
+        *c += 1;
+        let id = *c;
+
+        STABLE_TRANSACTIONS.with(|txs| {
+            let transaction = CustodialTransaction {
+                id,
+                tx_type,
+                from_user,
+                to_user,
+                virtual_amount,
+                on_chain_amount,
+                block_index,
+                status,
+                timestamp: ic_cdk::api::time(),
+            };
+
+            txs.borrow_mut().push(&transaction).expect("Failed to store custodial transaction");
+        });
+
+        id
+    })
+}
+
+#[query]
+fn get_virtual_balance() -> u64 {
+    let user = StorablePrincipal::from(caller());
+    USER_BALANCES.with(|balances| {
+        balances.borrow().get(&user).unwrap_or(0)
+    })
+}
+
+#[query]
+fn get_virtual_balance_formatted() -> Nat {
+    let balance_satoshis = get_virtual_balance();
+    Nat::from(balance_satoshis)
+}
+
+#[update]
+async fn deposit_funds(amount: Nat) -> Result<Nat, String> {
+    let user = caller();
+    let storable_user = StorablePrincipal::from(user);
+    let amount_satoshis = amount.0.to_u64_digits();
+
+    if amount_satoshis.len() != 1 {
+        return Err("Invalid amount format".to_string());
+    }
+
+    let amount_u64 = amount_satoshis[0];
+
+    ic_cdk::println!("[DEPOSIT] User {} depositing {} satoshis", user, amount_u64);
+
+    // First, transfer tokens FROM user TO backend canister
+    let backend_canister = ic_cdk::api::id();
+    let transfer_args = TransferArgs {
+        from_subaccount: None,
+        to: Account {
+            owner: backend_canister,
+            subaccount: None,
+        },
+        amount: amount.clone(),
+        fee: Some(Nat::from(10u64)), // 10 satoshi fee
+        memo: None,
+        created_at_time: Some(ic_cdk::api::time()),
+    };
+
+    let token_canister = get_token_canister()?;
+
+    // Perform the on-chain transfer
+    let result: CallResult<(Result<Nat, TransferError>,)> = ic_cdk::call(
+        token_canister,
+        "icrc1_transfer",
+        (transfer_args,)
+    ).await;
+
+    match result {
+        Ok((Ok(block_index),)) => {
+            ic_cdk::println!("[DEPOSIT] On-chain transfer successful, block: {}", block_index);
+
+            // Update user's virtual balance
+            USER_BALANCES.with(|balances| {
+                let mut balances_map = balances.borrow_mut();
+                let current_balance = balances_map.get(&storable_user).unwrap_or(0);
+                let new_balance = current_balance + amount_u64;
+                balances_map.insert(storable_user, new_balance);
+
+                ic_cdk::println!("[DEPOSIT] Virtual balance updated: {} -> {}", current_balance, new_balance);
+            });
+
+            // Store the deposit transaction
+            store_custodial_transaction(
+                TransactionType::Deposit,
+                Some(user),
+                None, // Backend doesn't have a user representation
+                Some(amount_u64),
+                Some(amount.clone()),
+                TransactionStatus::Confirmed,
+                Some(block_index.clone()),
+            );
+
+            Ok(block_index)
+        }
+        Ok((Err(transfer_error),)) => {
+            ic_cdk::println!("[DEPOSIT] Transfer failed: {:?}", transfer_error);
+
+            // Store failed transaction
+            store_custodial_transaction(
+                TransactionType::Deposit,
+                Some(user),
+                None,
+                Some(amount_u64),
+                Some(amount),
+                TransactionStatus::Failed,
+                None,
+            );
+
+            Err(format!("Deposit transfer failed: {:?}", transfer_error))
+        }
+        Err(e) => {
+            ic_cdk::println!("[DEPOSIT] Call failed: {:?}", e);
+            Err(format!("Deposit call failed: {:?}", e))
+        }
+    }
+}
+
+#[update]
+async fn withdraw_funds(amount: Nat) -> Result<Nat, String> {
+    let user = caller();
+    let amount_satoshis = amount.0.to_u64_digits();
+
+    if amount_satoshis.len() != 1 {
+        return Err("Invalid amount format".to_string());
+    }
+
+    let amount_u64 = amount_satoshis[0];
+
+    ic_cdk::println!("[WITHDRAW] User {} withdrawing {} satoshis", user, amount_u64);
+
+    // Check user's virtual balance
+    let storable_user = StorablePrincipal::from(user);
+    let current_balance = USER_BALANCES.with(|balances| {
+        balances.borrow().get(&storable_user).unwrap_or(0)
+    });
+
+    if current_balance < amount_u64 {
+        store_custodial_transaction(
+            TransactionType::Withdraw,
+            None,
+            Some(user),
+            Some(amount_u64),
+            Some(amount),
+            TransactionStatus::Failed,
+            None,
+        );
+
+        return Err(format!("Insufficient virtual balance. Available: {}, Requested: {}", current_balance, amount_u64));
+    }
+
+    // Transfer tokens FROM backend canister TO user
+    let transfer_args = TransferArgs {
+        from_subaccount: None,
+        to: Account {
+            owner: user,
+            subaccount: None,
+        },
+        amount: amount.clone(),
+        fee: Some(Nat::from(10u64)), // 10 satoshi fee
+        memo: None,
+        created_at_time: Some(ic_cdk::api::time()),
+    };
+
+    let token_canister = get_token_canister()?;
+
+    // Perform the on-chain transfer
+    let result: CallResult<(Result<Nat, TransferError>,)> = ic_cdk::call(
+        token_canister,
+        "icrc1_transfer",
+        (transfer_args,)
+    ).await;
+
+    match result {
+        Ok((Ok(block_index),)) => {
+            ic_cdk::println!("[WITHDRAW] On-chain transfer successful, block: {}", block_index);
+
+            // Update user's virtual balance
+            USER_BALANCES.with(|balances| {
+                let mut balances_map = balances.borrow_mut();
+                let new_balance = current_balance - amount_u64;
+                balances_map.insert(storable_user, new_balance);
+
+                ic_cdk::println!("[WITHDRAW] Virtual balance updated: {} -> {}", current_balance, new_balance);
+            });
+
+            // Store the withdrawal transaction
+            store_custodial_transaction(
+                TransactionType::Withdraw,
+                None,
+                Some(user),
+                Some(amount_u64),
+                Some(amount.clone()),
+                TransactionStatus::Confirmed,
+                Some(block_index.clone()),
+            );
+
+            Ok(block_index)
+        }
+        Ok((Err(transfer_error),)) => {
+            ic_cdk::println!("[WITHDRAW] Transfer failed: {:?}", transfer_error);
+
+            // Store failed transaction
+            store_custodial_transaction(
+                TransactionType::Withdraw,
+                None,
+                Some(user),
+                Some(amount_u64),
+                Some(amount),
+                TransactionStatus::Failed,
+                None,
+            );
+
+            Err(format!("Withdrawal transfer failed: {:?}", transfer_error))
+        }
+        Err(e) => {
+            ic_cdk::println!("[WITHDRAW] Call failed: {:?}", e);
+            Err(format!("Withdrawal call failed: {:?}", e))
+        }
+    }
+}
+
+#[update]
+async fn virtual_transfer(to_user: Principal, amount: Nat) -> Result<u64, String> {
+    let from_user = caller();
+    let amount_satoshis = amount.0.to_u64_digits();
+
+    if amount_satoshis.len() != 1 {
+        return Err("Invalid amount format".to_string());
+    }
+
+    let amount_u64 = amount_satoshis[0];
+
+    if from_user == to_user {
+        return Err("Cannot transfer to yourself".to_string());
+    }
+
+    ic_cdk::println!("[VIRTUAL_TRANSFER] {} -> {}: {} satoshis", from_user, to_user, amount_u64);
+
+    // Update both users' virtual balances atomically
+    let storable_from_user = StorablePrincipal::from(from_user);
+    let storable_to_user = StorablePrincipal::from(to_user);
+
+    let result = USER_BALANCES.with(|balances| {
+        let mut balances_map = balances.borrow_mut();
+
+        let from_balance = balances_map.get(&storable_from_user).unwrap_or(0);
+        let to_balance = balances_map.get(&storable_to_user).unwrap_or(0);
+
+        if from_balance < amount_u64 {
+            return Err(format!("Insufficient virtual balance. Available: {}, Requested: {}", from_balance, amount_u64));
+        }
+
+        // Perform the transfer
+        let new_from_balance = from_balance - amount_u64;
+        let new_to_balance = to_balance + amount_u64;
+
+        balances_map.insert(storable_from_user, new_from_balance);
+        balances_map.insert(storable_to_user, new_to_balance);
+
+        ic_cdk::println!("[VIRTUAL_TRANSFER] Balances updated - From: {} -> {}, To: {} -> {}",
+            from_balance, new_from_balance, to_balance, new_to_balance);
+
+        Ok(())
+    });
+
+    match result {
+        Ok(()) => {
+            // Store the virtual transfer transaction
+            let tx_id = store_custodial_transaction(
+                TransactionType::Send, // Virtual transfer is recorded as Send
+                Some(from_user),
+                Some(to_user),
+                Some(amount_u64),
+                None, // No on-chain transaction
+                TransactionStatus::Confirmed,
+                None, // No block index for virtual transfers
+            );
+
+            Ok(tx_id)
+        }
+        Err(e) => {
+            // Store failed transaction
+            store_custodial_transaction(
+                TransactionType::Send,
+                Some(from_user),
+                Some(to_user),
+                Some(amount_u64),
+                None,
+                TransactionStatus::Failed,
+                None,
+            );
+
+            Err(e)
+        }
+    }
+}
+
+#[query]
+fn get_backend_total_balance() -> Result<Nat, String> {
+    // This would query the backend canister's own balance on the ckTestBTC ledger
+    // For now, return placeholder - would need async implementation
+    Ok(Nat::from(0u64))
+}
+
+#[query]
+fn get_reserve_status() -> ReserveStatus {
+    let total_virtual = USER_BALANCES.with(|balances| {
+        balances.borrow().iter().map(|(_, balance)| balance).sum::<u64>()
+    });
+
+    // For now, using placeholder values - would need to query actual backend balance
+    let backend_actual = 0u64; // Placeholder
+    let reserve_ratio = if total_virtual > 0 {
+        backend_actual as f64 / total_virtual as f64
+    } else {
+        1.0
+    };
+
+    ReserveStatus {
+        total_virtual_balances: total_virtual,
+        backend_actual_balance: backend_actual,
+        reserve_ratio,
+        is_solvent: backend_actual >= total_virtual,
+    }
+}
+
+#[query]
+fn get_custodial_transaction_history() -> Vec<CustodialTransaction> {
+    STABLE_TRANSACTIONS.with(|txs| {
+        let transactions = txs.borrow();
+        let mut result = Vec::new();
+
+        // Get the last 100 transactions
+        let start_idx = if transactions.len() > 100 {
+            transactions.len() - 100
+        } else {
+            0
+        };
+
+        for i in start_idx..transactions.len() {
+            if let Some(tx) = transactions.get(i as u64) {
+                result.push(tx);
+            }
+        }
+
+        // Return in reverse order (most recent first)
+        result.reverse();
+        result
+    })
+}
 
 #[query]
 fn get_principal() -> Principal {

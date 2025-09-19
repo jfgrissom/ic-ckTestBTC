@@ -36,8 +36,7 @@ const App: React.FC = () => {
   const [sendModalToken, setSendModalToken] = useState<'ICP' | 'ckTestBTC'>('ckTestBTC');
   const [receiveModalToken, setReceiveModalToken] = useState<'ICP' | 'ckTestBTC'>('ckTestBTC');
 
-  // Use the state variables to prevent unused variable warnings
-  console.debug('Modal tokens:', { sendModalToken, receiveModalToken });
+  // Modal token states are managed for send/receive functionality
 
   // Deposit address state
   const [depositAddress, setDepositAddress] = useState<string>('');

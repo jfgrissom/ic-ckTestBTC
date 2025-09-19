@@ -26,7 +26,6 @@ export const initializeBackend = async (client: AuthClient): Promise<BackendActo
   if (config.network === 'local') {
     try {
       await agent.fetchRootKey();
-      console.log('[Backend Service] Root key fetched successfully for local development');
     } catch (error) {
       console.error('[Backend Service] Failed to fetch root key:', error);
       // In local development, we might need to proceed without root key verification
@@ -40,7 +39,6 @@ export const initializeBackend = async (client: AuthClient): Promise<BackendActo
   }) as BackendActor;
 
   backendActor = actor;
-  console.log('[Backend Service] Backend actor initialized with canister ID:', config.canisterId);
   return actor;
 };
 
