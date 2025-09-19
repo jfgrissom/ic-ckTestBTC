@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getBalance, getBtcAddress, transfer, useFaucet } from '@/services/wallet.service';
+import { getBalance, getBtcAddress, transfer, useFaucet, getWalletStatus, depositToCustody, WalletStatus } from '@/services/wallet.service';
 import { WalletState, WalletActions, TransactionState, TransactionActions } from '@/types/wallet.types';
 import { useTransactionHistory } from '@/hooks/use-transaction-history';
 import { useICP } from '@/hooks/use-icp';
@@ -17,6 +17,10 @@ import {
 
 interface UseWalletReturn extends WalletState, WalletActions, TransactionState, TransactionActions {
   handleFaucet: () => Promise<void>;
+  // Custodial wallet functionality
+  walletStatus?: WalletStatus;
+  handleDepositToCustody: (amount: string) => Promise<void>;
+  refreshWalletStatus: () => Promise<void>;
   // ICP integration
   icpBalance: string;
   icpLoading: boolean;
@@ -44,6 +48,7 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   const [loading, setLoading] = useState(false);
   const [sendAmount, setSendAmount] = useState('');
   const [sendTo, setSendTo] = useState('');
+  const [walletStatus, setWalletStatus] = useState<WalletStatus | undefined>(undefined);
 
   const { backend } = useBackend();
   const { showError } = useError();
@@ -69,20 +74,31 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     getRecentTransactions,
   } = useTransactionHistory();
 
-  const loadBalance = async (): Promise<void> => {
+  const loadWalletStatus = async (): Promise<void> => {
     setLoading(true);
     try {
-      const result = await getBalance();
-      if (result.success && result.balance) {
-        setBalance(result.balance);
+      const result = await getWalletStatus();
+      if (result.success && result.status) {
+        setWalletStatus(result.status);
+        // Update legacy balance for backward compatibility
+        setBalance(result.status.custodialBalance);
       } else {
-        console.error('Error getting balance:', result.error);
+        console.error('Error getting wallet status:', result.error);
       }
     } catch (error) {
-      console.error('Failed to load balance:', error);
+      console.error('Failed to load wallet status:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadBalance = async (): Promise<void> => {
+    // Use the new wallet status instead of old balance
+    await loadWalletStatus();
+  };
+
+  const refreshWalletStatus = async (): Promise<void> => {
+    await loadWalletStatus();
   };
 
   const loadBtcAddress = async (): Promise<void> => {
@@ -151,10 +167,11 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
       if (result.success) {
         showError({
           title: 'Test Tokens Received',
-          message: result.message || 'Successfully received test ckTestBTC tokens.',
+          message: result.message || 'Successfully received test ckTestBTC tokens in your personal account.',
+          details: 'Use the "Deposit to Wallet" button to move them into your custodial wallet.',
           severity: 'info'
         });
-        await loadBalance();
+        await loadWalletStatus(); // Load wallet status to show personal balance
         // Refresh transaction history after successful faucet
         await refreshTransactions();
       } else {
@@ -173,6 +190,39 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
         details: error.message,
         severity: 'error',
         onRetry: handleFaucet
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDepositToCustody = async (amount: string): Promise<void> => {
+    setLoading(true);
+    try {
+      const result = await depositToCustody(amount);
+      if (result.success && result.receipt) {
+        showError({
+          title: 'Deposit Successful',
+          message: `Successfully deposited ${result.receipt.amountDeposited} ckTestBTC to your custodial wallet.`,
+          details: `Block index: ${result.receipt.blockIndex}`,
+          severity: 'info'
+        });
+        await loadWalletStatus(); // Refresh wallet status
+        await refreshTransactions(); // Refresh transaction history
+      } else {
+        showError({
+          title: 'Deposit Failed',
+          message: 'Unable to deposit funds to custodial wallet.',
+          details: result.error,
+          severity: 'error'
+        });
+      }
+    } catch (error: any) {
+      showError({
+        title: 'Deposit Error',
+        message: 'An unexpected error occurred during the deposit.',
+        details: error.message,
+        severity: 'error'
       });
     } finally {
       setLoading(false);
@@ -231,7 +281,7 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   // Load initial data when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      loadBalance();
+      loadWalletStatus(); // Use comprehensive wallet status instead of just balance
       loadBtcAddress();
     }
   }, [isAuthenticated]);
@@ -244,11 +294,15 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
     sendTo,
     loadBalance,
     loadBtcAddress,
-    refreshBalance,
+    refreshBalance: refreshWalletStatus, // Use wallet status refresh
     setSendAmount,
     setSendTo,
     handleSend,
     handleFaucet,
+    // Custodial wallet functionality
+    walletStatus,
+    handleDepositToCustody,
+    refreshWalletStatus,
     // ICP integration
     icpBalance,
     icpLoading,

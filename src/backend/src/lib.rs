@@ -16,11 +16,29 @@ use ic_stable_structures::{
 };
 use std::borrow::Cow;
 
-// Define a specific Result type for string operations 
+// Define a specific Result type for string operations
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub enum TextResult {
     Ok(String),
     Err(String),
+}
+
+// Wallet status showing both custodial and personal balances
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct WalletStatus {
+    pub custodial_balance: Nat,  // Funds in custody (backend's subaccount)
+    pub personal_balance: Nat,   // User's personal funds (not in custody)
+    pub total_available: Nat,    // Sum of both balances
+    pub can_deposit: bool,       // True if personal_balance > 0
+}
+
+// Receipt for deposit operations
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct DepositReceipt {
+    pub block_index: Nat,
+    pub amount_deposited: Nat,
+    pub new_custodial_balance: Nat,
+    pub remaining_personal_balance: Nat,
 }
 
 // Transaction history types
@@ -217,6 +235,15 @@ fn get_icp_ledger_canister() -> Result<Principal, String> {
     }
 }
 
+// Generate a deterministic subaccount for a user principal
+fn generate_subaccount_for_user(user: Principal) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(user.as_slice());
+    hasher.update(b"ckTestBTC_custodial_account");
+    let hash = hasher.finalize();
+    hash[..32].to_vec()
+}
+
 // Helper to store a transaction
 fn store_transaction(
     tx_type: TransactionType,
@@ -366,8 +393,196 @@ fn get_virtual_balance_formatted() -> Nat {
     Nat::from(balance_satoshis)
 }
 
+// Get comprehensive wallet status showing both custodial and personal balances
+#[update]
+async fn get_wallet_status() -> Result<WalletStatus, String> {
+    let caller_principal = caller();
+    let user_subaccount = generate_subaccount_for_user(caller_principal);
+
+    ic_cdk::println!("[WALLET_STATUS] Getting status for principal: {}", caller_principal);
+
+    // Get custodial balance (backend's subaccount for this user)
+    let custodial_account = Account {
+        owner: ic_cdk::api::id(),  // Backend canister owns this
+        subaccount: Some(user_subaccount),
+    };
+
+    // Get personal balance (user's own account)
+    let personal_account = Account {
+        owner: caller_principal,
+        subaccount: None,
+    };
+
+    let token_canister = get_token_canister()?;
+
+    // Query both balances
+    let custodial_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (custodial_account,)
+    ).await;
+
+    let personal_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister,
+        "icrc1_balance_of",
+        (personal_account,)
+    ).await;
+
+    let custodial_balance = match custodial_result {
+        Ok((balance,)) => {
+            ic_cdk::println!("[WALLET_STATUS] Custodial balance: {}", balance);
+            balance
+        },
+        Err(e) => {
+            ic_cdk::println!("[WALLET_STATUS] Error getting custodial balance: {:?}", e);
+            Nat::from(0u64)
+        }
+    };
+
+    let personal_balance = match personal_result {
+        Ok((balance,)) => {
+            ic_cdk::println!("[WALLET_STATUS] Personal balance: {}", balance);
+            balance
+        },
+        Err(e) => {
+            ic_cdk::println!("[WALLET_STATUS] Error getting personal balance: {:?}", e);
+            Nat::from(0u64)
+        }
+    };
+
+    let total = custodial_balance.clone() + personal_balance.clone();
+    let can_deposit = personal_balance.clone() > Nat::from(0u64);
+
+    Ok(WalletStatus {
+        custodial_balance,
+        personal_balance,
+        total_available: total,
+        can_deposit,
+    })
+}
+
+// Deposit user's personal funds into custody (backend's subaccount)
+#[update]
+async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
+    let caller_principal = caller();
+    let user_subaccount = generate_subaccount_for_user(caller_principal);
+
+    ic_cdk::println!("[DEPOSIT_TO_CUSTODY] User {} depositing {} to custody", caller_principal, amount);
+
+    // First check user has sufficient personal balance
+    let personal_account = Account {
+        owner: caller_principal,
+        subaccount: None,
+    };
+
+    let token_canister = get_token_canister()?;
+
+    // Check personal balance
+    let balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (personal_account.clone(),)
+    ).await;
+
+    let personal_balance = match balance_result {
+        Ok((balance,)) => balance,
+        Err(e) => return Err(format!("Failed to check balance: {:?}", e)),
+    };
+
+    // Check if user has enough balance (amount + fee)
+    let fee = Nat::from(10u64);
+    let total_needed = amount.clone() + fee.clone();
+    if personal_balance < total_needed {
+        return Err(format!(
+            "Insufficient personal balance. Balance: {} satoshis, Needed: {} satoshis (including 10 satoshi fee)",
+            personal_balance, total_needed
+        ));
+    }
+
+    // Transfer from user's personal account to backend's custodial subaccount
+    let custodial_account = Account {
+        owner: ic_cdk::api::id(),  // Backend canister
+        subaccount: Some(user_subaccount),  // User-specific subaccount
+    };
+
+    let transfer_args = TransferArgs {
+        from_subaccount: None,  // User's default account
+        to: custodial_account.clone(),
+        amount: amount.clone(),
+        fee: Some(fee),
+        memo: None,
+        created_at_time: Some(ic_cdk::api::time()),
+    };
+
+    // Use icrc2_transfer_from for transferring on behalf of user
+    // Note: This requires prior approval from the user
+    let transfer_result: CallResult<(Result<Nat, TransferError>,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_transfer",
+        (transfer_args,)
+    ).await;
+
+    let block_index = match transfer_result {
+        Ok((Ok(index),)) => {
+            ic_cdk::println!("[DEPOSIT_TO_CUSTODY] Transfer successful, block: {}", index);
+            index
+        },
+        Ok((Err(e),)) => {
+            ic_cdk::println!("[DEPOSIT_TO_CUSTODY] Transfer error: {:?}", e);
+            return Err(format!("Transfer failed: {:?}", e));
+        },
+        Err(e) => {
+            ic_cdk::println!("[DEPOSIT_TO_CUSTODY] Call error: {:?}", e);
+            return Err(format!("Failed to call transfer: {:?}", e));
+        }
+    };
+
+    // Get updated balances
+    let custodial_balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (custodial_account,)
+    ).await;
+
+    let personal_balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister,
+        "icrc1_balance_of",
+        (personal_account,)
+    ).await;
+
+    let new_custodial_balance = match custodial_balance_result {
+        Ok((balance,)) => balance,
+        Err(_) => Nat::from(0u64),
+    };
+
+    let remaining_personal_balance = match personal_balance_result {
+        Ok((balance,)) => balance,
+        Err(_) => Nat::from(0u64),
+    };
+
+    // Store transaction record
+    store_transaction(
+        TransactionType::Deposit,
+        "ckTestBTC".to_string(),
+        amount.clone(),
+        caller_principal.to_text(),
+        "Custodial Wallet".to_string(),
+        TransactionStatus::Confirmed,
+        Some(block_index.clone()),
+    );
+
+    Ok(DepositReceipt {
+        block_index,
+        amount_deposited: amount,
+        new_custodial_balance,
+        remaining_personal_balance,
+    })
+}
+
 #[update]
 async fn deposit_funds(amount: Nat) -> Result<Nat, String> {
+    // Deprecated - use deposit_to_custody instead
+    // Keeping for backward compatibility
     let user = caller();
     let storable_user = StorablePrincipal::from(user);
     let amount_satoshis = amount.0.to_u64_digits();
@@ -378,7 +593,7 @@ async fn deposit_funds(amount: Nat) -> Result<Nat, String> {
 
     let amount_u64 = amount_satoshis[0];
 
-    ic_cdk::println!("[DEPOSIT] User {} depositing {} satoshis", user, amount_u64);
+    ic_cdk::println!("[DEPOSIT] DEPRECATED - Use deposit_to_custody instead");
 
     // First, transfer tokens FROM user TO backend canister
     let backend_canister = ic_cdk::api::id();

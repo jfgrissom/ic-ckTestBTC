@@ -9,6 +9,12 @@ type CustodialTransaction = record {
   timestamp : nat64;
   tx_type : TransactionType;
 };
+type DepositReceipt = record {
+  block_index : nat;
+  amount_deposited : nat;
+  remaining_personal_balance : nat;
+  new_custodial_balance : nat;
+};
 type ReserveStatus = record {
   reserve_ratio : float64;
   is_solvent : bool;
@@ -16,7 +22,9 @@ type ReserveStatus = record {
   backend_actual_balance : nat64;
 };
 type Result = variant { Ok : nat; Err : text };
-type Result_1 = variant { Ok : nat64; Err : text };
+type Result_1 = variant { Ok : DepositReceipt; Err : text };
+type Result_2 = variant { Ok : WalletStatus; Err : text };
+type Result_3 = variant { Ok : nat64; Err : text };
 type TextResult = variant { Ok : text; Err : text };
 type Transaction = record {
   id : nat64;
@@ -31,8 +39,15 @@ type Transaction = record {
 };
 type TransactionStatus = variant { Failed; Confirmed; Pending };
 type TransactionType = variant { Withdraw; Mint; Deposit; Send; Receive };
+type WalletStatus = record {
+  personal_balance : nat;
+  total_available : nat;
+  custodial_balance : nat;
+  can_deposit : bool;
+};
 service : {
   deposit_funds : (nat) -> (Result);
+  deposit_to_custody : (nat) -> (Result_1);
   faucet : () -> (TextResult);
   get_backend_total_balance : () -> (Result) query;
   get_balance : () -> (Result);
@@ -47,9 +62,10 @@ service : {
   get_transaction_history : () -> (vec Transaction) query;
   get_virtual_balance : () -> (nat64) query;
   get_virtual_balance_formatted : () -> (nat) query;
+  get_wallet_status : () -> (Result_2);
   transfer : (principal, nat) -> (Result);
   transfer_icp : (principal, nat) -> (Result);
-  virtual_transfer : (principal, nat) -> (Result_1);
+  virtual_transfer : (principal, nat) -> (Result_3);
   withdraw_funds : (nat) -> (Result);
   withdraw_testbtc : (text, nat) -> (TextResult);
 }
