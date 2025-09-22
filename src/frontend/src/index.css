@@ -116,6 +116,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Ensure body is always scrollable */
+    overflow-y: auto !important;
+    min-height: 100vh;
+  }
+  html {
+    /* Ensure html is always scrollable */
+    overflow-y: auto !important;
+    scroll-behavior: smooth;
   }
 }
 

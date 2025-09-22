@@ -1,9 +1,12 @@
 import React from 'react';
-import { LoginScreenProps } from '@/types/auth.types';
+import { ConnectButton, ConnectDialog } from '@connect2ic/react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, loading, authClient }) => {
+/**
+ * Login screen component using Connect2IC v2 pattern
+ * Provides multi-provider authentication UI (Internet Identity & NFID)
+ */
+const LoginScreen: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center text-white p-8">
       <Card className="bg-white/20 backdrop-blur-md border-white/30 shadow-xl">
@@ -12,14 +15,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, loading, authClient 
           <p className="text-xl mb-8 opacity-90">
             Simple ckTestBTC token wallet on the Internet Computer
           </p>
-          <Button
-            onClick={onLogin}
-            disabled={!authClient || loading}
-            size="lg"
-            className="bg-white/20 hover:bg-white/30 border-2 border-white/30 hover:border-white/40 backdrop-blur-sm text-white hover:text-white transition-all duration-300 hover:-translate-y-1"
-          >
-            {loading ? 'Signing in...' : 'Sign in with Internet Identity'}
-          </Button>
+
+          {/* Connect2IC button - handles provider selection automatically */}
+          <ConnectButton />
+
+          {/* Connect2IC dialog - shows provider options when ConnectButton is clicked */}
+          <ConnectDialog />
         </CardContent>
       </Card>
     </div>

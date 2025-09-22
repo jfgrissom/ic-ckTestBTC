@@ -7,7 +7,13 @@ interface BackendTransaction {
   from_address: string;
   to_address: string;
   timestamp: bigint;
-  block_index?: bigint;
+  block_index?: bigint[];
+  // Additional properties that are accessed in the code
+  tx_type: { Send?: null; Receive?: null; Deposit?: null; Withdraw?: null; Mint?: null };
+  status: { Pending?: null; Confirmed?: null; Failed?: null };
+  token: string;
+  from: string;
+  to: string;
 }
 import { Transaction } from '@/components/shared/transaction-item';
 
@@ -47,7 +53,7 @@ const transformBackendTransaction = (backendTx: BackendTransaction): Transaction
     to: backendTx.to,
     status: status,
     timestamp: Number(backendTx.timestamp),
-    block_index: backendTx.block_index.length > 0 ? backendTx.block_index[0].toString() : undefined,
+    block_index: backendTx.block_index && backendTx.block_index.length > 0 ? backendTx.block_index[0].toString() : undefined,
   };
 };
 

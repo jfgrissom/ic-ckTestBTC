@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getBalance, getBtcAddress, transfer, useFaucet, getWalletStatus, depositToCustody, WalletStatus } from '@/services/wallet.service';
+import { getBtcAddress, transfer, useFaucet, getWalletStatus, WalletStatus } from '@/services/wallet.service';
+import { depositFunds } from '@/services/custodial-wallet.service';
+import { Principal } from '@dfinity/principal';
+import { useConnect } from '@connect2ic/react';
 import { WalletState, WalletActions, TransactionState, TransactionActions } from '@/types/wallet.types';
 import { useTransactionHistory } from '@/hooks/use-transaction-history';
+import { Transaction } from '@/services/transaction.service';
 import { useICP } from '@/hooks/use-icp';
-import { useBackend } from '@/hooks/use-backend';
 import { useError } from '@/contexts/error-context';
 import {
   validatePrincipalAddress,
@@ -30,7 +33,7 @@ interface UseWalletReturn extends WalletState, WalletActions, TransactionState, 
   formatICPBalance: (balance: string) => string;
   parseICPAmount: (amount: string) => string;
   // Transaction history integration
-  transactionHistory: any[];
+  transactionHistory: Transaction[];
   transactionLoading: boolean;
   transactionError: string | null;
   transactionStats: { total: number; confirmed: number; pending: number; failed: number };
@@ -75,8 +78,8 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   const [sendTo, setSendTo] = useState('');
   const [walletStatus, setWalletStatus] = useState<WalletStatus | undefined>(undefined);
 
-  const { backend } = useBackend();
   const { showError } = useError();
+  const { principal } = useConnect();
 
   // Initialize ICP functionality
   const {
@@ -181,7 +184,7 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
           severity: 'error'
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError({
         title: 'Transfer Error',
         message: 'An unexpected error occurred during the transfer.',
@@ -216,7 +219,7 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
           onRetry: handleFaucet
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError({
         title: 'Faucet Request Failed',
         message: 'Failed to request test tokens from the faucet.',
@@ -230,14 +233,27 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
   };
 
   const handleDepositToCustody = async (amount: string): Promise<void> => {
+    if (!principal) {
+      showError({
+        title: 'Authentication Required',
+        message: 'Please authenticate to deposit funds.',
+        severity: 'error'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await depositToCustody(amount);
-      if (result.success && result.receipt) {
+      const userPrincipal = Principal.fromText(principal);
+      console.log('[UseWallet] Starting direct ledger deposit for user:', principal);
+
+      const result = await depositFunds(amount, userPrincipal);
+      if (result.success) {
+        const depositedAmount = result.receipt?.amountDeposited || amount;
         showError({
           title: 'Deposit Successful',
-          message: `Successfully deposited ${result.receipt.amountDeposited} ckTestBTC to your custodial wallet.`,
-          details: `Block index: ${result.receipt.blockIndex}`,
+          message: `Successfully deposited ${depositedAmount} ckTestBTC to your custodial wallet.`,
+          details: `Block index: ${result.blockIndex}`,
           severity: 'info'
         });
         await loadWalletStatus(); // Refresh wallet status
@@ -250,7 +266,7 @@ export const useWallet = (isAuthenticated: boolean): UseWalletReturn => {
           severity: 'error'
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError({
         title: 'Deposit Error',
         message: 'An unexpected error occurred during the deposit.',

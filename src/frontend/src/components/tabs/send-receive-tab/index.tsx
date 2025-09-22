@@ -81,7 +81,7 @@ const SendReceiveTab: React.FC<SendReceiveTabProps> = ({
     <div className="space-y-6">
       {/* Token Balances Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className={cn(selectedToken === 'ICP' && 'ring-2 ring-blue-500')}>
+        <Card className={cn(selectedToken === 'ICP' && 'border-2 border-blue-500 shadow-lg')}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -110,7 +110,7 @@ const SendReceiveTab: React.FC<SendReceiveTabProps> = ({
           </CardContent>
         </Card>
 
-        <Card className={cn(selectedToken === 'ckTestBTC' && 'ring-2 ring-orange-500')}>
+        <Card className={cn(selectedToken === 'ckTestBTC' && 'border-2 border-orange-500 shadow-lg')}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">

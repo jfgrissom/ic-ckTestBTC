@@ -1,20 +1,8 @@
-import { AuthClient } from '@dfinity/auth-client';
 import { ActorSubclass } from '@dfinity/agent';
 import { _SERVICE } from 'declarations/backend/backend.did';
 
 // Use the generated service interface instead of custom types to avoid sync issues
 export type BackendActor = ActorSubclass<_SERVICE>;
-
-export interface BackendState {
-  backend: BackendActor | null;
-  loading: boolean;
-  error: string | null;
-}
-
-export interface BackendActions {
-  initializeBackend: (client: AuthClient) => Promise<void>;
-  clearBackend: () => void;
-}
 
 export interface NetworkConfig {
   host: string;

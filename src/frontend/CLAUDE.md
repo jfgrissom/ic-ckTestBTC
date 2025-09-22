@@ -456,6 +456,183 @@ src/components/
         └── index.test.tsx
 ```
 
+## TypeScript Standards
+
+### **CRITICAL RULE: NEVER Use `any` Type**
+
+**MANDATORY**: The `any` type is STRICTLY FORBIDDEN in this TypeScript codebase. This undermines type safety and defeats the purpose of using TypeScript.
+
+#### ❌ **FORBIDDEN - Using `any` Type**
+```typescript
+// NEVER DO THIS - Completely defeats TypeScript purpose
+let actor: any = null;
+const result: any = await someFunction();
+const data: any = response.json();
+
+// WRONG - Casting to any instead of proper typing
+const ledgerActor = actor as any;
+const idlFactory = factory as any;
+```
+
+#### ✅ **CORRECT - Proper TypeScript Patterns**
+
+**1. Use Specific Interface Types:**
+```typescript
+// Define proper interfaces
+interface BackendActor {
+  get_balance(): Promise<Result<bigint, string>>;
+  transfer(to: Principal, amount: bigint): Promise<Result<bigint, string>>;
+}
+
+// Use the interface
+let backendActor: BackendActor | null = null;
+```
+
+**2. Use Generic Constraints:**
+```typescript
+// Generic with constraints instead of any
+interface ActorService<T extends Record<string, (...args: any[]) => any>> {
+  actor: T | null;
+  setActor: (actor: T) => void;
+}
+
+// Usage with specific actor type
+const ledgerService: ActorService<LedgerActor> = {
+  actor: null,
+  setActor: (actor: LedgerActor) => { this.actor = actor; }
+};
+```
+
+**3. Use Union Types for Multiple Possibilities:**
+```typescript
+// Instead of any, use union types
+type ApiResponse = SuccessResponse | ErrorResponse | LoadingResponse;
+type ActorState = ConnectedActor | DisconnectedActor | InitializingActor;
+```
+
+**4. Use `unknown` for Truly Unknown Data:**
+```typescript
+// Use unknown instead of any for external data
+const parseExternalData = (data: unknown): ValidatedData => {
+  if (typeof data === 'object' && data !== null && 'field' in data) {
+    return data as ValidatedData;
+  }
+  throw new Error('Invalid data structure');
+};
+```
+
+**5. Proper IDL Factory Typing:**
+```typescript
+// For IDL factories, use proper DFX-generated types
+import type { IDL } from '@dfinity/candid';
+
+interface CanisterConfig {
+  canisterId: string;
+  idlFactory: IDL.InterfaceFactory;
+  createActor: (canisterId: string, options?: ActorConfig) => Actor;
+}
+
+// Use the properly typed config
+const ledgerConfig: CanisterConfig = {
+  canisterId: mockLedger.canisterId,
+  idlFactory: mockLedger.idlFactory,
+  createActor: mockLedger.createActor
+};
+```
+
+#### **Exception Handling Without `any`**
+
+```typescript
+// ❌ WRONG - Using any for errors
+catch (error: any) {
+  console.error(error.message);
+}
+
+// ✅ CORRECT - Proper error typing
+catch (error: unknown) {
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  console.error(message);
+}
+
+// ✅ EVEN BETTER - Custom error types
+interface ApiError {
+  message: string;
+  code?: number;
+  details?: string;
+}
+
+const handleApiError = (error: unknown): ApiError => {
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+  return { message: 'An unknown error occurred' };
+};
+```
+
+#### **Type Assertion Guidelines**
+
+When you must assert types, use specific assertions:
+
+```typescript
+// ❌ WRONG - Asserting to any
+const result = response as any;
+
+// ✅ CORRECT - Specific type assertion with validation
+const assertBackendActor = (actor: unknown): BackendActor => {
+  if (!actor || typeof actor !== 'object') {
+    throw new Error('Invalid actor: not an object');
+  }
+
+  if (!('get_balance' in actor) || typeof actor.get_balance !== 'function') {
+    throw new Error('Invalid actor: missing get_balance method');
+  }
+
+  return actor as BackendActor;
+};
+```
+
+#### **Gradual Typing Migration Pattern**
+
+For legacy code that needs proper typing:
+
+```typescript
+// Step 1: Replace any with unknown
+// OLD: let data: any;
+let data: unknown;
+
+// Step 2: Add type guards
+const isValidData = (data: unknown): data is ExpectedType => {
+  return typeof data === 'object' && data !== null && 'requiredField' in data;
+};
+
+// Step 3: Use proper types
+if (isValidData(data)) {
+  // TypeScript now knows data is ExpectedType
+  console.log(data.requiredField);
+}
+```
+
+### **Enforcement**
+
+**BLOCKING**: Any pull request containing `any` types will be **immediately rejected**. No exceptions.
+
+**Code Review Checklist:**
+- [ ] Zero occurrences of `any` type in code
+- [ ] All function parameters have explicit types
+- [ ] All function return types are declared
+- [ ] External data properly validated before use
+- [ ] Error handling uses proper TypeScript patterns
+- [ ] IDL factories use proper DFX-generated types
+
+### **Benefits of Strict TypeScript**
+
+1. **🛡 Type Safety**: Catch errors at compile time, not runtime
+2. **📖 Documentation**: Types serve as living documentation
+3. **🔧 Refactoring**: Safe refactoring with IDE support
+4. **🧠 IntelliSense**: Better autocomplete and code suggestions
+5. **🐛 Bug Prevention**: Prevent null/undefined errors
+6. **👥 Team Consistency**: Clear contracts between code modules
+
 ## Quality Requirements
 
 ### Before Implementation
@@ -472,6 +649,7 @@ src/components/
    npm test             # All tests must pass
    ```
 3. **Follow the component structure** exactly as specified
+4. **Zero `any` types** - TypeScript compilation must be strict
 
 ## Migration Strategy
 

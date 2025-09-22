@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getICPBalance, transferICP, formatICPBalance, parseICPAmount } from '@/services/icp.service';
-import { useBackend } from '@/hooks/use-backend';
 
 interface UseICPReturn {
   balance: string;
@@ -17,13 +16,7 @@ export const useICP = (): UseICPReturn => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { backend: backendActor } = useBackend();
-
   const refreshBalance = async (): Promise<void> => {
-    if (!backendActor) {
-      setError('Backend not initialized');
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -44,9 +37,6 @@ export const useICP = (): UseICPReturn => {
   };
 
   const handleTransfer = async (to: string, amount: string): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
-    if (!backendActor) {
-      return { success: false, error: 'Backend not initialized' };
-    }
 
     setLoading(true);
     setError(null);
@@ -80,11 +70,7 @@ export const useICP = (): UseICPReturn => {
     }
   };
 
-  useEffect(() => {
-    if (backendActor) {
-      refreshBalance();
-    }
-  }, [backendActor]);
+  // Auto-refresh will be handled by calling component
 
   return {
     balance,

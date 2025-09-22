@@ -5,8 +5,8 @@ export interface WalletState {
 }
 
 export interface WalletActions {
-  loadBalance: (actor?: any) => Promise<void>;
-  loadBtcAddress: (actor?: any) => Promise<void>;
+  loadBalance: (actor?: unknown) => Promise<void>;
+  loadBtcAddress: (actor?: unknown) => Promise<void>;
   refreshBalance: () => Promise<void>;
 }
 
@@ -19,7 +19,7 @@ export interface TransactionState {
 export interface TransactionActions {
   setSendAmount: (amount: string) => void;
   setSendTo: (recipient: string) => void;
-  handleSend: () => Promise<void>;
+  handleSend: (recipient?: string, amount?: string, usePersonalFunds?: boolean) => Promise<void>;
 }
 
 export interface BalanceSectionProps {

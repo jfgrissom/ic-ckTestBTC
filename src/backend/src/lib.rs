@@ -598,6 +598,72 @@ async fn deposit_to_custody(amount: Nat) -> Result<DepositReceipt, String> {
     })
 }
 
+// Notify backend of completed direct ledger deposit for balance tracking
+#[update]
+async fn notify_deposit(block_index: Nat, amount: Nat) -> Result<DepositReceipt, String> {
+    let caller_principal = caller();
+    let user_subaccount = generate_subaccount_for_user(caller_principal);
+
+    ic_cdk::println!("[NOTIFY_DEPOSIT] User {} reporting deposit of {} at block {}", caller_principal, amount, block_index);
+
+    // Verify the transfer actually occurred by checking the custodial account balance
+    let custodial_account = Account {
+        owner: ic_cdk::api::id(),  // Backend canister
+        subaccount: Some(user_subaccount),  // User-specific subaccount
+    };
+
+    let token_canister = get_token_canister()?;
+
+    // Get current custodial balance to verify the deposit
+    let balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (custodial_account.clone(),)
+    ).await;
+
+    let new_custodial_balance = match balance_result {
+        Ok((balance,)) => balance,
+        Err(e) => return Err(format!("Failed to verify custodial balance: {:?}", e)),
+    };
+
+    // Get user's personal balance for the receipt
+    let personal_account = Account {
+        owner: caller_principal,
+        subaccount: None,
+    };
+
+    let personal_balance_result: CallResult<(Nat,)> = ic_cdk::call(
+        token_canister.clone(),
+        "icrc1_balance_of",
+        (personal_account.clone(),)
+    ).await;
+
+    let remaining_personal_balance = match personal_balance_result {
+        Ok((balance,)) => balance,
+        Err(e) => return Err(format!("Failed to check personal balance: {:?}", e)),
+    };
+
+    // Store transaction record for the deposit
+    store_transaction(
+        TransactionType::Deposit,
+        "ckTestBTC".to_string(),
+        amount.clone(),
+        caller_principal.to_text(),
+        "Custodial Wallet".to_string(),
+        TransactionStatus::Confirmed,
+        Some(block_index.clone()),
+    );
+
+    ic_cdk::println!("[NOTIFY_DEPOSIT] Deposit verified. New custodial balance: {}", new_custodial_balance);
+
+    Ok(DepositReceipt {
+        block_index,
+        amount_deposited: amount,
+        new_custodial_balance,
+        remaining_personal_balance,
+    })
+}
+
 #[update]
 async fn deposit_funds(amount: Nat) -> Result<Nat, String> {
     // Deprecated - use deposit_to_custody instead

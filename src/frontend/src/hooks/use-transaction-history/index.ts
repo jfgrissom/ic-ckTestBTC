@@ -9,7 +9,6 @@ import {
   getTransactionStats,
   Transaction,
 } from '@/services/transaction.service';
-import { useBackend } from '@/hooks/use-backend';
 
 // Types for enhanced filtering and pagination
 type TransactionType = 'All' | 'Send' | 'Receive' | 'Deposit' | 'Withdraw' | 'Mint';
@@ -75,7 +74,6 @@ export const useTransactionHistory = (defaultPageSize: number = 10): UseTransact
     totalPages: 1,
   });
 
-  const { backend: backendActor } = useBackend();
 
   const refreshTransactions = async (): Promise<void> => {
     const { getBackend } = await import('@/services/backend.service');
@@ -194,11 +192,7 @@ export const useTransactionHistory = (defaultPageSize: number = 10): UseTransact
 
   const stats = useMemo(() => getTransactionStats(transactions), [transactions]);
 
-  useEffect(() => {
-    if (backendActor) {
-      refreshTransactions();
-    }
-  }, [backendActor]);
+  // Auto-refresh will be handled by calling component
 
   return {
     transactions,

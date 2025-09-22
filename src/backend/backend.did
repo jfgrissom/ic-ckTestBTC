@@ -63,6 +63,7 @@ service : {
   get_virtual_balance : () -> (nat64) query;
   get_virtual_balance_formatted : () -> (nat) query;
   get_wallet_status : () -> (Result_2);
+  notify_deposit : (nat, nat) -> (Result_1);
   transfer : (principal, nat) -> (Result);
   transfer_icp : (principal, nat) -> (Result);
   virtual_transfer : (principal, nat) -> (Result_3);

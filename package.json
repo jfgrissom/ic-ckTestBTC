@@ -24,8 +24,9 @@
     "format:rust": "cargo fmt --manifest-path src/backend/Cargo.toml"
   },
   "dependencies": {
+    "@connect2ic/core": "^0.2.0-beta.24",
+    "@connect2ic/react": "^0.2.0-beta.24",
     "@dfinity/agent": "^0.20.2",
-    "@dfinity/auth-client": "^0.20.2",
     "@dfinity/candid": "^0.20.2",
     "@dfinity/principal": "^0.20.2",
     "@radix-ui/react-dialog": "^1.1.15",

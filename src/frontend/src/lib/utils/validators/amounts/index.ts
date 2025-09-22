@@ -1,5 +1,6 @@
 import {
   TokenType,
+  FeeMultiplierType,
   getTokenConfig,
   formatTokenAmount,
   convertToSmallestUnits,

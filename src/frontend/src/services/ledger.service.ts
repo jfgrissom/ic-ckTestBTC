@@ -1,7 +1,4 @@
-import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { getAuthClient } from './auth.service';
-import { getNetworkConfig } from '@/types/backend.types';
 
 // ICRC-1 Token Standard types
 interface Account {
@@ -23,6 +20,13 @@ interface TransferResult {
   Err?: TransferError;
 }
 
+// Proper interface for ICRC-1 ledger actor
+interface LedgerActor {
+  icrc1_balance_of(account: Account): Promise<bigint>;
+  icrc1_transfer(args: TransferArgs): Promise<TransferResult>;
+  icrc1_fee(): Promise<bigint>;
+}
+
 interface TransferError {
   BadFee?: { expected_fee: bigint };
   BadBurn?: { min_burn_amount: bigint };
@@ -34,86 +38,71 @@ interface TransferError {
   GenericError?: { error_code: bigint; message: string };
 }
 
-// Candid interface for ckTestBTC ledger
-const idlFactory = ({ IDL }: any) => {
-  const Account = IDL.Record({
-    owner: IDL.Principal,
-    subaccount: IDL.Opt(IDL.Vec(IDL.Nat8)),
-  });
+// Global state for Connect2IC ledger actor
+let connectLedgerActor: LedgerActor | null = null;
 
-  const TransferArgs = IDL.Record({
-    from_subaccount: IDL.Opt(IDL.Vec(IDL.Nat8)),
-    to: Account,
-    amount: IDL.Nat,
-    fee: IDL.Opt(IDL.Nat),
-    memo: IDL.Opt(IDL.Vec(IDL.Nat8)),
-    created_at_time: IDL.Opt(IDL.Nat64),
-  });
+/**
+ * Set the Connect2IC ledger actor (called by App.tsx when actor is available)
+ */
+export const setConnectLedgerActor = (actor: unknown): void => {
+  // Handle null case when clearing the actor
+  if (actor === null) {
+    console.log('[Ledger Service] Clearing Connect2IC ledger actor');
+    connectLedgerActor = null;
+    return;
+  }
 
-  const TransferError = IDL.Variant({
-    BadFee: IDL.Record({ expected_fee: IDL.Nat }),
-    BadBurn: IDL.Record({ min_burn_amount: IDL.Nat }),
-    InsufficientFunds: IDL.Record({ balance: IDL.Nat }),
-    TooOld: IDL.Null,
-    CreatedInFuture: IDL.Record({ ledger_time: IDL.Nat64 }),
-    Duplicate: IDL.Record({ duplicate_of: IDL.Nat }),
-    TemporarilyUnavailable: IDL.Null,
-    GenericError: IDL.Record({
-      error_code: IDL.Nat,
-      message: IDL.Text,
-    }),
-  });
-
-  const TransferResult = IDL.Variant({
-    Ok: IDL.Nat,
-    Err: TransferError,
-  });
-
-  return IDL.Service({
-    icrc1_balance_of: IDL.Func([Account], [IDL.Nat], ['query']),
-    icrc1_transfer: IDL.Func([TransferArgs], [TransferResult], []),
-    icrc1_fee: IDL.Func([], [IDL.Nat], ['query']),
-  });
-};
-
-// Get the ledger canister ID based on environment
-const getLedgerCanisterId = (): string => {
-  const config = getNetworkConfig();
-  if (config.network === 'local') {
-    // Use mock ledger in local development
-    return import.meta.env.VITE_LOCAL_MOCK_LEDGER_CANISTER_ID || 'umunu-kh777-77774-qaaca-cai';
+  // Type guard to ensure actor has required ICRC-1 methods
+  if (isValidLedgerActor(actor)) {
+    console.log('[Ledger Service] Setting Connect2IC ledger actor');
+    connectLedgerActor = actor;
   } else {
-    // Use real ckTestBTC canister on IC
-    return import.meta.env.VITE_IC_CKTESTBTC_CANISTER_ID || 'g4xu7-jiaaa-aaaan-aaaaq-cai';
+    console.error('[Ledger Service] Invalid ledger actor: missing required ICRC-1 methods');
+    connectLedgerActor = null;
+    throw new Error('Invalid ledger actor: missing required ICRC-1 methods');
   }
 };
 
-// Create ledger actor
-const createLedgerActor = async () => {
-  const authClient = getAuthClient();
-  if (!authClient) {
-    throw new Error('Auth client not initialized');
+/**
+ * Get current Connect2IC ledger actor
+ */
+export const getConnectLedgerActor = (): LedgerActor | null => {
+  return connectLedgerActor;
+};
+
+/**
+ * Type guard to validate ledger actor interface
+ */
+const isValidLedgerActor = (actor: unknown): actor is LedgerActor => {
+  if (!actor || typeof actor !== 'object') {
+    return false;
   }
 
-  const identity = authClient.getIdentity();
-  const config = getNetworkConfig();
+  const requiredMethods = ['icrc1_balance_of', 'icrc1_transfer', 'icrc1_fee'];
+  return requiredMethods.every(method =>
+    method in actor && typeof (actor as Record<string, unknown>)[method] === 'function'
+  );
+};
 
-  const agent = new HttpAgent({
-    identity,
-    host: config.host,
-  });
+/**
+ * Clear Connect2IC ledger actor
+ */
+export const clearConnectLedgerActor = (): void => {
+  connectLedgerActor = null;
+};
 
-  if (config.network === 'local') {
-    await agent.fetchRootKey();
+
+
+/**
+ * Get ledger actor - uses Connect2IC actor only
+ */
+const getLedgerActor = (): LedgerActor => {
+  if (!connectLedgerActor) {
+    throw new Error('Connect2IC ledger actor not initialized. Please reconnect your wallet.');
   }
 
-  const canisterId = getLedgerCanisterId();
-  console.log('[Ledger Service] Creating actor for canister:', canisterId);
-
-  return Actor.createActor(idlFactory, {
-    agent,
-    canisterId,
-  });
+  console.log('[Ledger Service] Using Connect2IC actor');
+  return connectLedgerActor;
 };
 
 /**
@@ -121,13 +110,13 @@ const createLedgerActor = async () => {
  */
 export const getLedgerBalance = async (owner: Principal): Promise<{ success: boolean; balance?: string; error?: string }> => {
   try {
-    const actor = await createLedgerActor();
+    const actor = getLedgerActor();
     const account: Account = {
       owner,
       subaccount: [], // Use empty array for None in Candid optional
     };
 
-    const balance = await actor.icrc1_balance_of(account) as bigint;
+    const balance = await actor.icrc1_balance_of(account);
     const balanceString = balance.toString();
 
     // Convert from satoshis to ckTestBTC
@@ -135,9 +124,10 @@ export const getLedgerBalance = async (owner: Principal): Promise<{ success: boo
 
     console.log('[Ledger Service] Balance for', owner.toString(), ':', formattedBalance, 'ckTestBTC');
     return { success: true, balance: formattedBalance };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get balance';
     console.error('[Ledger Service] Failed to get balance:', error);
-    return { success: false, error: error.message || 'Failed to get balance' };
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -149,7 +139,7 @@ export const transferViaLedger = async (
   amount: string // Amount in ckTestBTC
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
   try {
-    const actor = await createLedgerActor();
+    const actor = getLedgerActor();
 
     // Convert ckTestBTC to satoshis
     const amountBigInt = BigInt(Math.floor(Number(amount) * 100000000));
@@ -172,13 +162,13 @@ export const transferViaLedger = async (
       amountSatoshis: amountBigInt.toString(),
     });
 
-    const result = await actor.icrc1_transfer(transferArgs) as TransferResult;
+    const result = await actor.icrc1_transfer(transferArgs);
 
-    if (result.Ok !== undefined) {
+    if ('Ok' in result && result.Ok !== undefined) {
       const blockIndex = result.Ok.toString();
       console.log('[Ledger Service] Transfer successful, block index:', blockIndex);
       return { success: true, blockIndex };
-    } else if (result.Err) {
+    } else if ('Err' in result && result.Err !== undefined) {
       const error = formatTransferError(result.Err);
       console.error('[Ledger Service] Transfer failed:', error);
       return { success: false, error };
@@ -186,9 +176,10 @@ export const transferViaLedger = async (
       console.error('[Ledger Service] Transfer failed: Unknown error');
       return { success: false, error: 'Unknown transfer error' };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Transfer failed';
     console.error('[Ledger Service] Transfer error:', error);
-    return { success: false, error: error.message || 'Transfer failed' };
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -197,8 +188,8 @@ export const transferViaLedger = async (
  */
 export const getLedgerFee = async (): Promise<{ success: boolean; fee?: string; error?: string }> => {
   try {
-    const actor = await createLedgerActor();
-    const fee = await actor.icrc1_fee() as bigint;
+    const actor = getLedgerActor();
+    const fee = await actor.icrc1_fee();
     const feeString = fee.toString();
 
     // Convert from satoshis to ckTestBTC
@@ -206,35 +197,36 @@ export const getLedgerFee = async (): Promise<{ success: boolean; fee?: string; 
 
     console.log('[Ledger Service] Transfer fee:', formattedFee, 'ckTestBTC');
     return { success: true, fee: formattedFee };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get fee';
     console.error('[Ledger Service] Failed to get fee:', error);
-    return { success: false, error: error.message || 'Failed to get fee' };
+    return { success: false, error: errorMessage };
   }
 };
 
 // Helper to format transfer errors
 const formatTransferError = (error: TransferError): string => {
-  if (error.BadFee) {
+  if ('BadFee' in error && error.BadFee) {
     const expectedFee = (Number(error.BadFee.expected_fee) / 100000000).toFixed(8);
     return `Bad fee. Expected: ${expectedFee} ckTestBTC`;
   }
-  if (error.InsufficientFunds) {
+  if ('InsufficientFunds' in error && error.InsufficientFunds) {
     const balance = (Number(error.InsufficientFunds.balance) / 100000000).toFixed(8);
     return `Insufficient funds. Balance: ${balance} ckTestBTC`;
   }
-  if (error.TooOld) {
+  if ('TooOld' in error) {
     return 'Transaction too old';
   }
-  if (error.CreatedInFuture) {
+  if ('CreatedInFuture' in error) {
     return 'Transaction created in future';
   }
-  if (error.Duplicate) {
+  if ('Duplicate' in error && error.Duplicate) {
     return `Duplicate transaction. Original block: ${error.Duplicate.duplicate_of}`;
   }
-  if (error.TemporarilyUnavailable) {
+  if ('TemporarilyUnavailable' in error) {
     return 'Service temporarily unavailable';
   }
-  if (error.GenericError) {
+  if ('GenericError' in error && error.GenericError) {
     return error.GenericError.message;
   }
   return 'Unknown transfer error';

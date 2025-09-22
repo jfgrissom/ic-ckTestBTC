@@ -1,8 +1,7 @@
 import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
-// import { getAuthClient } from './auth.service'; // Currently unused
 import { getNetworkConfig } from '@/types/backend.types';
-import { getVirtualBalance as getCustodialBalance } from './custodial-wallet.service';
+import { getVirtualBalance as getCustodialBalance, depositFunds } from './custodial-wallet.service';
 
 // Interface for comprehensive wallet status
 export interface WalletStatus {
@@ -225,6 +224,7 @@ const transferViaCustodialProxy = async (
 /**
  * Transfer via direct ledger (for personal funds)
  * Used when: User Primary + No Subaccount + Balance Available
+ * Uses Connect2IC ckTestBTC ledger actor for ICRC-1 transfers
  */
 const transferViaDirectLedger = async (
   recipientPrincipal: string,
@@ -246,7 +246,7 @@ const transferViaDirectLedger = async (
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Direct transfer failed',
+      error: error.message || 'Direct ledger transfer failed',
       method: 'direct'
     };
   }

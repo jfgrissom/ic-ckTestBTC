@@ -637,6 +637,53 @@ application.
   - ✅ **Impact:** Users can now send ckTestBTC directly between principals using real ledger transactions
   - ✅ **Architecture Achievement:** Direct ICRC-1 standard transfers with real block confirmation
 
+- ✅ **Custodial Deposit InsufficientFunds Regression Fix:** Complete resolution of critical deposit failure with PRD-compliant architecture
+  - ✅ **Problem Analysis:** Systematic root cause identification and architectural realignment
+    - ✅ **InsufficientFunds Error:** `{ balance: Nat(0) }` errors during custodial deposits despite users having personal balance
+    - ✅ **Root Cause Discovery:** Frontend incorrectly routing deposits through backend causing caller principal mismatch
+    - ✅ **Architecture Violation:** Backend trying to transfer user tokens via `icrc1_transfer` from backend account (balance: 0)
+    - ✅ **Regression Source:** Post-II v2 migration changes broke the original direct ledger pattern
+    - ✅ **PRD Compliance Gap:** Violated Transfer Method Matrix Row 2 requirements
+  - ✅ **Connect2IC v2 Migration Implementation:** Complete modernization of authentication and actor management
+    - ✅ **Authentication System Overhaul:** Migrated from class-based auth to Connect2IC v2 functional patterns
+    - ✅ **Eliminated Class-Based Services:** Removed `auth.service.ts`, `use-auth`, `use-backend` hooks
+    - ✅ **Modern Actor Management:** Direct `useConnect` and `useCanister` hook integration
+    - ✅ **Functional Service Pattern:** Complete migration to closure-based state management
+    - ✅ **Enhanced App Architecture:** Streamlined `App.tsx` with proper Connect2IC provider integration
+    - ✅ **Loading Screen Enhancement:** Improved user experience during authentication initialization
+  - ✅ **Direct Ledger Pattern Implementation:** PRD-compliant custodial deposit architecture
+    - ✅ **Frontend Direct Transfer:** User executes `icrc1_transfer` to backend custodial subaccount
+    - ✅ **Subaccount Generation Matching:** Frontend replicates backend's SHA-256 `generate_subaccount_for_user()` function
+    - ✅ **Enhanced Custodial Service:** Complete `custodial-wallet.service.ts` refactor with direct ledger communication
+    - ✅ **Two-Step Process:** Direct transfer + backend notification for balance tracking
+    - ✅ **Proper ICRC-1 Encoding:** Correct Candid optional field handling with array format `[] | [T]`
+  - ✅ **Backend Balance Notification System:** Robust tracking infrastructure for direct transfers
+    - ✅ **notify_deposit() Function:** New backend endpoint for post-transfer balance verification
+    - ✅ **Transfer Verification:** Backend validates actual ledger state before updating records
+    - ✅ **Enhanced Error Handling:** Clear separation between transfer failures and tracking failures
+    - ✅ **Transaction Recording:** Proper transaction history integration with block index tracking
+    - ✅ **Receipt Generation:** Comprehensive deposit confirmation with balance details
+  - ✅ **Technical Implementation Details:**
+    - ✅ **Subaccount Cryptography:** Frontend `crypto.subtle.digest('SHA-256')` matching backend implementation
+    - ✅ **Ledger Service Enhancement:** Extended `ledger.service.ts` with custodial account transfer capabilities
+    - ✅ **Principal Management:** Connect2IC `useConnect` hook integration for user identity
+    - ✅ **Error Attribution:** Proper error classification between transfer and notification phases
+    - ✅ **Fee Calculation Preservation:** Maintained existing fee handling (10 satoshi) throughout refactor
+  - ✅ **Architecture Compliance Restoration:**
+    - ✅ **PRD Matrix Row 2:** `User + Personal Balance = Can deposit` functionality restored
+    - ✅ **Direct Ledger Standard:** User controls own tokens, transfers directly to custodial subaccount
+    - ✅ **Symmetric Design:** Deposits now match sends (both use direct ledger calls)
+    - ✅ **No Delegation Required:** Eliminated complex icrc2_transfer_from approval flows
+    - ✅ **IC Standards Compliance:** Proper ICRC-1 standard implementation throughout
+  - ✅ **Impact and Benefits:**
+    - ✅ **Eliminated InsufficientFunds Errors:** Users can successfully deposit personal funds to custodial wallets
+    - ✅ **Enhanced Security:** User maintains direct control of personal tokens during transfer process
+    - ✅ **Improved Performance:** Faster deposits without intermediate backend transfer steps
+    - ✅ **Better Error Handling:** Clear error attribution between transfer and tracking phases
+    - ✅ **Future-Proof Architecture:** Scalable direct ledger pattern aligned with IC best practices
+  - ✅ **Files Enhanced:** `custodial-wallet.service.ts`, `use-wallet/index.ts`, `ledger.service.ts`, `backend/src/lib.rs`, `App.tsx`
+  - ✅ **Testing Verified:** Complete workflow validated with successful deposit flow restoration
+
 - ✅ **Critical Transfer Bug Resolution:** Fixed BigInt conversion and error handling issues
   - ✅ **BigInt Decimal Conversion Bug:** Fixed "Cannot convert .5 to a BigInt" errors
     - ✅ **Root Cause:** Direct BigInt conversion of decimal user inputs (e.g., "0.5", ".5") was failing
