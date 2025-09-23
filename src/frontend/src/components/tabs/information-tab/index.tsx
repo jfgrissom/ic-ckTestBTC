@@ -47,7 +47,7 @@ const InformationTab: React.FC = () => {
         <h2 className="text-xl font-semibold mb-4">Your Balances</h2>
         <div className="grid gap-4">
           <BalanceSection
-            walletStatus={walletStatus}
+            walletStatus={walletStatus || undefined}
             loading={loading}
             error={error}
             initialized={initialized}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useConnect, useCanister, Connect2ICProvider } from '@connect2ic/react';
+import { Connect2ICProvider } from '@connect2ic/react';
 import { createClient } from '@connect2ic/core';
 import { InternetIdentity } from '@connect2ic/core/providers/internet-identity';
 import { NFID } from '@connect2ic/core/providers/nfid';
@@ -22,11 +22,11 @@ import DepositsWithdrawalsTab from '@/components/tabs/deposits-withdrawals-tab';
 import SendReceiveTab from '@/components/tabs/send-receive-tab';
 import TransactionsTab from '@/components/tabs/transactions-tab';
 
-// Modal Components
-import DepositModal from '@/components/modals/deposit-modal';
-import WithdrawModal from '@/components/modals/withdraw-modal';
-import SendModal from '@/components/modals/send-modal';
-import ReceiveModal from '@/components/modals/receive-modal';
+// Modal Components - TODO: Implement these modals
+// import DepositModal from '@/components/modals/deposit-modal';
+// import WithdrawModal from '@/components/modals/withdraw-modal';
+// import SendModal from '@/components/modals/send-modal';
+// import ReceiveModal from '@/components/modals/receive-modal';
 
 // UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

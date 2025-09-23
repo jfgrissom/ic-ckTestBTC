@@ -24,7 +24,7 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
   walletStatus,
   loading,
   error,
-  initialized,
+  initialized: _initialized,
   onRefreshBalance,
   onFaucet,
   onDepositToCustody,

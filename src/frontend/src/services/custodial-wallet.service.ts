@@ -77,15 +77,15 @@ const transferToCustodialAccount = async (
 
     // ICRC-1 transfer arguments with subaccount
     const transferArgs = {
-      from_subaccount: [], // User's default account (empty array for None)
+      from_subaccount: [] as [] | [Uint8Array], // User's default account (empty array for None)
       to: {
         owner: backendPrincipal,
-        subaccount: [userSubaccount], // Array for Some(subaccount)
+        subaccount: [userSubaccount] as [] | [Uint8Array], // Array for Some(subaccount)
       },
       amount: amountBigInt,
-      fee: [BigInt(10)], // 10 satoshi fee
-      memo: [],
-      created_at_time: [BigInt(Date.now() * 1000000)],
+      fee: [BigInt(10)] as [] | [bigint], // 10 satoshi fee
+      memo: [] as [],
+      created_at_time: [BigInt(Date.now() * 1000000)] as [] | [bigint],
     };
 
     console.log('[Custodial Service] Calling icrc1_transfer with args:', {

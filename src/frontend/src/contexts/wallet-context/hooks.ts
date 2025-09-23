@@ -43,7 +43,6 @@ export const useWalletState = () => {
 // Basic actions hook
 export const useWalletActions = () => {
   const { dispatch } = useWalletContext();
-  const { principal } = useConnect();
 
   return useMemo(() => ({
     refreshWallet: () => refreshWalletData(dispatch),
@@ -87,7 +86,7 @@ export const useTransactions = () => {
 
     // Utility functions
     getRecent: (limit: number = 10) => state.transactions.slice(0, limit),
-    getByType: (type: string) => state.transactions.filter(tx => tx.type === type),
+    getByType: (type: string) => state.transactions.filter(tx => tx.tx_type === type),
   }), [state.transactions, state.transactionStats, state.loading.transactions, state.errors.transactions, dispatch]);
 };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import TransactionItem, { Transaction } from '@/components/shared/transaction-item';
+import TransactionItem from '@/components/shared/transaction-item';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +48,7 @@ const TransactionsTab: React.FC = () => {
     let filtered = transactions;
 
     if (typeFilter !== 'All') {
-      filtered = filtered.filter(tx => tx.type === typeFilter);
+      filtered = filtered.filter(tx => tx.tx_type === typeFilter);
     }
 
     if (statusFilter !== 'All') {
