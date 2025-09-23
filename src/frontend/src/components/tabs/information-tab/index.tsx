@@ -13,7 +13,7 @@ import {
 
 const InformationTab: React.FC = () => {
   const { walletStatus, loading, error, initialized, refresh } = useWalletBalance();
-  const { useFaucet: handleFaucet } = useFaucet();
+  const { useFaucet: handleFaucet, loading: faucetLoading } = useFaucet();
   const { depositToCustody } = useTransfers();
 
   const handleDepositToCustody = async (amount: string) => {
@@ -54,6 +54,7 @@ const InformationTab: React.FC = () => {
             onRefreshBalance={refresh}
             onFaucet={handleFaucet}
             onDepositToCustody={handleDepositToCustody}
+            faucetLoading={faucetLoading}
           />
         </div>
       </div>

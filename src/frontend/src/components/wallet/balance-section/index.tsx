@@ -17,6 +17,7 @@ interface BalanceSectionProps {
   onFaucet?: () => void;
   onDepositToCustody?: (amount: string) => void;
   showFaucet?: boolean;
+  faucetLoading?: boolean;
 }
 
 const BalanceSection: React.FC<BalanceSectionProps> = ({
@@ -28,6 +29,7 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
   onFaucet,
   onDepositToCustody,
   showFaucet = getNetworkConfig().network === 'local',
+  faucetLoading = false,
 }) => {
   const handleDepositMax = () => {
     if (walletStatus?.personalBalance && onDepositToCustody) {
@@ -157,11 +159,11 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
             {showFaucet && onFaucet && (
               <Button
                 onClick={onFaucet}
-                disabled={loading}
+                disabled={loading || faucetLoading}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
               >
-                <Coins className="w-4 h-4" />
-                Get Test Tokens (Faucet)
+                <Coins className={`w-4 h-4 ${faucetLoading ? 'animate-spin' : ''}`} />
+                {faucetLoading ? 'Minting Tokens...' : 'Get Test Tokens (Faucet)'}
               </Button>
             )}
           </div>
