@@ -71,7 +71,7 @@ const InformationTab: React.FC = () => {
           {/* IC Token Actions */}
           <div>
             <h3 className="text-lg font-medium mb-3 text-blue-700">IC Token Operations</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <ActionButton
                 onClick={handleOpenSendModal}
                 variant="outline"

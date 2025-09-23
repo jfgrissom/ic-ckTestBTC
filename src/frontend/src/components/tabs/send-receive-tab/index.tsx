@@ -98,9 +98,10 @@ const SendReceiveTab: React.FC = () => {
                   <p className="text-sm text-gray-600">Available to send</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <ActionButton
                     onClick={handleOpenSendModal}
+                    variant="outline"
                     className="flex-col h-20 space-y-1"
                     icon={<Send className="h-5 w-5" />}
                   >
@@ -143,9 +144,10 @@ const SendReceiveTab: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <ActionButton
                     onClick={handleOpenReceiveModal}
+                    variant="outline"
                     className="flex-col h-20 space-y-1"
                     icon={<ArrowDownToLine className="h-5 w-5" />}
                   >

@@ -30,7 +30,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       size={size}
       disabled={disabled || loading}
       className={cn(
-        "relative transition-all duration-200 hover:scale-105 active:scale-95",
+        "relative transition-colors duration-200",
         loading && "opacity-75 cursor-not-allowed",
         className
       )}

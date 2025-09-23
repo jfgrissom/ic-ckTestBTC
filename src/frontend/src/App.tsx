@@ -145,11 +145,11 @@ const AppContent: React.FC = () => {
         <Card className="bg-white/95 backdrop-blur-sm shadow-xl">
           <CardContent className="p-6">
             <Tabs defaultValue="information" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
-                <TabsTrigger value="information">Information</TabsTrigger>
-                <TabsTrigger value="deposits-withdrawals">Deposits & Withdrawals</TabsTrigger>
-                <TabsTrigger value="send-receive">Send & Receive</TabsTrigger>
-                <TabsTrigger value="transactions">Transactions</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6 bg-transparent p-0 h-auto gap-1">
+                <TabsTrigger value="information" className="text-xs sm:text-sm data-[state=active]:bg-background data-[state=inactive]:bg-muted">Information</TabsTrigger>
+                <TabsTrigger value="deposits-withdrawals" className="text-xs sm:text-sm data-[state=active]:bg-background data-[state=inactive]:bg-muted">Deposits & Withdrawals</TabsTrigger>
+                <TabsTrigger value="send-receive" className="text-xs sm:text-sm data-[state=active]:bg-background data-[state=inactive]:bg-muted">Send & Receive</TabsTrigger>
+                <TabsTrigger value="transactions" className="text-xs sm:text-sm data-[state=active]:bg-background data-[state=inactive]:bg-muted">Transactions</TabsTrigger>
               </TabsList>
 
               <TabsContent value="information" className="space-y-6">
