@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn, formatTokenBalance } from '@/lib';
 
 export interface TokenBalanceProps {
-  token: 'ICP' | 'ckTestBTC';
+  token: 'ckTestBTC';
   balance: string;
   loading?: boolean;
   className?: string;
@@ -19,15 +19,8 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
   onRefresh,
 }) => {
 
-  const getTokenColor = (token: string) => {
-    switch (token) {
-      case 'ICP':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'ckTestBTC':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const getTokenColor = () => {
+    return 'bg-orange-100 text-orange-800 border-orange-200';
   };
 
   return (
@@ -35,7 +28,7 @@ const TokenBalance: React.FC<TokenBalanceProps> = ({
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Badge className={getTokenColor(token)}>
+            <Badge className={getTokenColor()}>
               {token}
             </Badge>
             <div>

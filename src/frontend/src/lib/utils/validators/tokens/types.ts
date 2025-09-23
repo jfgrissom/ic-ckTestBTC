@@ -1,4 +1,4 @@
-import { TokenType, TokenConfig, FeeMultiplierType } from './constants';
+import { TokenType, FeeMultiplierType } from './constants';
 
 /**
  * Options for token operations and validations

@@ -7,23 +7,23 @@ const mockProps = {
   loading: false,
   balance: '50000000', // 0.5 ckTestBTC in satoshis
   depositAddress: undefined,
-  onGetDepositAddress: jest.fn(),
-  onFaucet: jest.fn(),
-  onOpenDepositModal: jest.fn(),
-  onOpenWithdrawModal: jest.fn(),
+  onGetDepositAddress: vi.fn(),
+  onFaucet: vi.fn(),
+  onOpenDepositModal: vi.fn(),
+  onOpenWithdrawModal: vi.fn(),
   isLocalDev: false,
 };
 
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    writeText: jest.fn().mockImplementation(() => Promise.resolve()),
+    writeText: vi.fn().mockImplementation(() => Promise.resolve()),
   },
 });
 
 describe('DepositsWithdrawalsTab', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders balance correctly', () => {

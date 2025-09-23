@@ -28,7 +28,6 @@ interface SendModalProps {
   onOpenChange: (open: boolean) => void;
   onSend?: (token: TokenType, recipient: string, amount: string, usePersonalFunds?: boolean) => Promise<void>;
   loading?: boolean;
-  icpBalance?: string;
   ckTestBTCBalance?: string;
   // Enhanced validation props
   onValidate?: (recipient: string, amount: string, token: TokenType, usePersonalFunds?: boolean) => { valid: boolean; errors: Record<string, string>; details?: Record<string, string> };
@@ -42,20 +41,18 @@ const SendModal: React.FC<SendModalProps> = ({
   onOpenChange,
   onSend,
   loading = false,
-  icpBalance = '0',
   ckTestBTCBalance = '0',
   onValidate,
   onCalculateMax,
   transferCapabilities,
 }) => {
-  const [selectedToken, setSelectedToken] = useState<TokenType>('ckTestBTC');
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [usePersonalFunds, setUsePersonalFunds] = useState(true); // Default to personal funds (direct ledger)
 
   // Update transfer method selection when capabilities change
   React.useEffect(() => {
-    if (selectedToken === 'ckTestBTC' && transferCapabilities) {
+    if (transferCapabilities) {
       // If current selection is not available, switch to available option
       if (usePersonalFunds && !transferCapabilities.canTransferPersonal && transferCapabilities.canTransferCustodial) {
         setUsePersonalFunds(false);
@@ -63,18 +60,14 @@ const SendModal: React.FC<SendModalProps> = ({
         setUsePersonalFunds(true);
       }
     }
-  }, [selectedToken, transferCapabilities, usePersonalFunds]);
+  }, [transferCapabilities, usePersonalFunds]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [details, setDetails] = useState<Record<string, string>>({});
 
 
   const getCurrentBalance = () => {
-    if (selectedToken === 'ICP') {
-      return icpBalance;
-    }
-
     // For ckTestBTC, determine balance based on transfer method selection
-    if (transferCapabilities && selectedToken === 'ckTestBTC') {
+    if (transferCapabilities) {
       return usePersonalFunds
         ? transferCapabilities.personalBalance
         : transferCapabilities.custodialBalance;
@@ -103,7 +96,7 @@ const SendModal: React.FC<SendModalProps> = ({
     }
 
     // For ckTestBTC, validate against the selected balance type
-    if (selectedToken === 'ckTestBTC' && transferCapabilities) {
+    if (transferCapabilities) {
       // Check if the selected transfer method is available
       if (usePersonalFunds && !transferCapabilities.canTransferPersonal) {
         setErrors({ general: 'Personal funds not available for transfer' });
@@ -118,8 +111,8 @@ const SendModal: React.FC<SendModalProps> = ({
     const validationResult = onValidate(
       recipient,
       amount,
-      selectedToken,
-      selectedToken === 'ckTestBTC' ? usePersonalFunds : undefined
+      'ckTestBTC',
+      usePersonalFunds
     );
     if (!validationResult.valid) {
       setErrors(validationResult.errors);
@@ -139,11 +132,7 @@ const SendModal: React.FC<SendModalProps> = ({
       // Note: Amount conversion is now handled by the validation layer
       // The parent component should handle conversion when calling onSend
       // Pass usePersonalFunds parameter for ckTestBTC transfers
-      if (selectedToken === 'ckTestBTC') {
-        await onSend?.(selectedToken, recipient, amount, usePersonalFunds);
-      } else {
-        await onSend?.(selectedToken, recipient, amount);
-      }
+      await onSend?.('ckTestBTC', recipient, amount, usePersonalFunds);
       handleClose();
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Send transaction failed' });
@@ -151,7 +140,6 @@ const SendModal: React.FC<SendModalProps> = ({
   };
 
   const handleClose = () => {
-    setSelectedToken('ckTestBTC');
     setRecipient('');
     setAmount('');
     setUsePersonalFunds(true); // Reset to default (personal funds)
@@ -163,24 +151,16 @@ const SendModal: React.FC<SendModalProps> = ({
   const handleMaxClick = () => {
     if (onCalculateMax) {
       const maxAmount = onCalculateMax(
-        selectedToken,
-        selectedToken === 'ckTestBTC' ? usePersonalFunds : undefined
+        'ckTestBTC',
+        usePersonalFunds
       );
       setAmount(maxAmount);
     } else {
       // Fallback calculation if no prop provided
-      const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), selectedToken));
-      const feeReserve = selectedToken === 'ICP' ? 0.0001 : 0.00001;
+      const maxAmount = parseFloat(formatTokenBalance(getCurrentBalance(), 'ckTestBTC'));
+      const feeReserve = 0.00001;
       const availableAmount = Math.max(0, maxAmount - feeReserve);
       setAmount(availableAmount.toFixed(8));
-    }
-  };
-
-  const getTokenDescription = () => {
-    if (selectedToken === 'ICP') {
-      return 'Send ICP tokens to another Principal ID on the Internet Computer.';
-    } else {
-      return 'Send ckTestBTC tokens to another Principal ID on the Internet Computer.';
     }
   };
 
@@ -188,48 +168,15 @@ const SendModal: React.FC<SendModalProps> = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Send {selectedToken}</DialogTitle>
+          <DialogTitle>Send ckTestBTC</DialogTitle>
           <DialogDescription>
-            {getTokenDescription()}
+            Send ckTestBTC tokens to another Principal ID on the Internet Computer.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pb-4">
-          {/* Token Selection */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Select Token
-            </label>
-            <div className="flex space-x-2">
-              <Button
-                variant={selectedToken === 'ckTestBTC' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedToken('ckTestBTC')}
-                className="flex-1"
-              >
-                <Badge variant="secondary" className="mr-2">
-                  ckTestBTC
-                </Badge>
-                {transferCapabilities && selectedToken === 'ckTestBTC'
-                  ? formatTokenBalance(getCurrentBalance(), 'ckTestBTC')
-                  : formatTokenBalance(ckTestBTCBalance, 'ckTestBTC')}
-              </Button>
-              <Button
-                variant={selectedToken === 'ICP' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedToken('ICP')}
-                className="flex-1"
-              >
-                <Badge variant="secondary" className="mr-2">
-                  ICP
-                </Badge>
-                {formatTokenBalance(icpBalance, 'ICP')}
-              </Button>
-            </div>
-          </div>
-
           {/* Transfer Method Selection for ckTestBTC - Always show when ckTestBTC is selected */}
-          {selectedToken === 'ckTestBTC' && transferCapabilities && (
+          {transferCapabilities && (
             <div className="border border-blue-200 bg-blue-50 rounded-lg p-3">
               <label className="text-sm font-semibold text-blue-900 mb-3 block">
                 Select Transfer Method (Required)
@@ -351,10 +298,10 @@ const SendModal: React.FC<SendModalProps> = ({
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-gray-700">
-                Amount ({selectedToken})
+                Amount (ckTestBTC)
               </label>
               <div className="text-xs text-gray-500">
-                Balance: {formatTokenBalance(getCurrentBalance(), selectedToken)} {selectedToken}
+                Balance: {formatTokenBalance(getCurrentBalance(), 'ckTestBTC')} ckTestBTC
                 <Button
                   variant="ghost"
                   size="sm"
@@ -368,8 +315,8 @@ const SendModal: React.FC<SendModalProps> = ({
             <Input
               type="number"
               step="0.00000001"
-              min={selectedToken === 'ICP' ? '0.0001' : '0.00001'}
-              max={formatTokenBalance(getCurrentBalance(), selectedToken)}
+              min={'0.00001'}
+              max={formatTokenBalance(getCurrentBalance(), 'ckTestBTC')}
               placeholder="0.00000000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -407,12 +354,10 @@ const SendModal: React.FC<SendModalProps> = ({
           )}
 
           <div className="text-xs text-gray-500 space-y-1">
-            <p>• Minimum send: {selectedToken === 'ICP' ? '0.0001 ICP' : '0.00001 ckTestBTC'}</p>
+            <p>• Minimum send: 0.00001 ckTestBTC</p>
             <p>• Network fees will be deducted from your balance</p>
             <p>• Transactions are processed on the Internet Computer</p>
-            {selectedToken === 'ckTestBTC' && (
-              <p>• ckTestBTC is an ICRC-2 token representing Bitcoin testnet</p>
-            )}
+            <p>• ckTestBTC is an ICRC-2 token representing Bitcoin testnet</p>
           </div>
         </div>
 
@@ -426,12 +371,12 @@ const SendModal: React.FC<SendModalProps> = ({
               loading ||
               !recipient ||
               !amount ||
-              (selectedToken === 'ckTestBTC' && transferCapabilities &&
+              (transferCapabilities &&
                !transferCapabilities.canTransferPersonal &&
                !transferCapabilities.canTransferCustodial)
             }
           >
-            {loading ? 'Sending...' : `Send ${selectedToken}`}
+            {loading ? 'Sending...' : `Send ckTestBTC`}
           </Button>
         </DialogFooter>
       </DialogContent>

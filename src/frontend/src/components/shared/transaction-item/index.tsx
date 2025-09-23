@@ -24,7 +24,6 @@ interface TransactionItemProps {
 const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   className,
-  userPrincipal,
 }) => {
 
   const formatAddress = (address: string) => {

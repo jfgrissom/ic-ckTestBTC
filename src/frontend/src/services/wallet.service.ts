@@ -1,7 +1,7 @@
 import { Principal } from '@dfinity/principal';
-import { getBackend } from './backend.service';
+import { getBackend, ensureBackendReady, testBackendConnection } from './backend.service';
 import { getNetworkConfig } from '@/types/backend.types';
-import { getVirtualBalance as getCustodialBalance, depositFunds } from './custodial-wallet.service';
+import { getVirtualBalance as getCustodialBalance } from './custodial-wallet.service';
 
 // Interface for comprehensive wallet status
 export interface WalletStatus {
@@ -15,12 +15,17 @@ export interface WalletStatus {
  * Get comprehensive wallet status showing both custodial and personal balances
  */
 export const getWalletStatus = async (): Promise<{ success: boolean; status?: WalletStatus; error?: string }> => {
-  const backend = getBackend();
-  if (!backend) {
-    return { success: false, error: 'Backend not initialized' };
-  }
-
   try {
+    // Ensure backend is ready before making API calls
+    const backend = await ensureBackendReady();
+
+    // Additional connectivity test
+    const isConnected = await testBackendConnection(backend);
+    if (!isConnected) {
+      return { success: false, error: 'Backend connection failed' };
+    }
+
+    console.log('[Wallet Service] Getting wallet status...');
     const result = await backend.get_wallet_status();
     if ('Ok' in result) {
       const status = result.Ok;
@@ -29,6 +34,13 @@ export const getWalletStatus = async (): Promise<{ success: boolean; status?: Wa
       const custodialBalance = (Number(status.custodial_balance.toString()) / 100000000).toFixed(8);
       const personalBalance = (Number(status.personal_balance.toString()) / 100000000).toFixed(8);
       const totalAvailable = (Number(status.total_available.toString()) / 100000000).toFixed(8);
+
+      console.log('[Wallet Service] Wallet status retrieved successfully:', {
+        custodialBalance,
+        personalBalance,
+        totalAvailable,
+        canDeposit: status.can_deposit
+      });
 
       return {
         success: true,
@@ -40,9 +52,11 @@ export const getWalletStatus = async (): Promise<{ success: boolean; status?: Wa
         }
       };
     } else {
+      console.error('[Wallet Service] Backend returned error:', result.Err);
       return { success: false, error: result.Err };
     }
   } catch (error: any) {
+    console.error('[Wallet Service] Exception in getWalletStatus:', error);
     return { success: false, error: error.message || 'Failed to get wallet status' };
   }
 };

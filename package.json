@@ -2,6 +2,7 @@
   "name": "ic-cktestbtc-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dfx": "dfx start --clean",
     "dfx:create": "./scripts/setup-canisters.sh",
@@ -48,18 +49,22 @@
     "validator": "^13.15.15"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.19.14",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "@typescript-eslint/eslint-plugin": "^7.7.0",
     "@typescript-eslint/parser": "^7.7.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5.4.5",
     "vite": "^5.2.10",
-    "vite-plugin-environment": "^1.1.3"
+    "vite-plugin-environment": "^1.1.3",
+    "vitest": "^3.2.4"
   }
 }

@@ -4,26 +4,24 @@ import '@testing-library/jest-dom';
 import InformationTab from './index';
 
 const mockProps = {
-  icpBalance: '100.50000000',
   ckTestBTCBalance: '0.00123456',
   loading: false,
-  onRefreshBalances: jest.fn(),
-  onOpenSendModal: jest.fn(),
-  onOpenReceiveModal: jest.fn(),
-  onOpenDepositModal: jest.fn(),
-  onOpenWithdrawModal: jest.fn(),
+  onRefreshBalances: vi.fn(),
+  onOpenSendModal: vi.fn(),
+  onOpenReceiveModal: vi.fn(),
+  onOpenDepositModal: vi.fn(),
+  onOpenWithdrawModal: vi.fn(),
 };
 
 describe('InformationTab', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders balances section correctly', () => {
     render(<InformationTab {...mockProps} />);
 
     expect(screen.getByText('Your Balances')).toBeInTheDocument();
-    expect(screen.getByText('ICP')).toBeInTheDocument();
     expect(screen.getByText('ckTestBTC')).toBeInTheDocument();
   });
 
@@ -35,8 +33,6 @@ describe('InformationTab', () => {
     expect(screen.getByText('Bitcoin TestNet Operations')).toBeInTheDocument();
 
     // Check for action buttons
-    expect(screen.getByText('Send ICP')).toBeInTheDocument();
-    expect(screen.getByText('Receive ICP')).toBeInTheDocument();
     expect(screen.getByText('Send ckTestBTC')).toBeInTheDocument();
     expect(screen.getByText('Receive ckTestBTC')).toBeInTheDocument();
     expect(screen.getByText('Deposit TestBTC')).toBeInTheDocument();
@@ -47,20 +43,9 @@ describe('InformationTab', () => {
     render(<InformationTab {...mockProps} />);
 
     expect(screen.getByText('About Your Wallet')).toBeInTheDocument();
-    expect(screen.getByText(/Native Internet Computer token/)).toBeInTheDocument();
     expect(screen.getByText(/Chain-key Bitcoin testnet token/)).toBeInTheDocument();
     expect(screen.getByText(/Bridge between Bitcoin TestNet/)).toBeInTheDocument();
     expect(screen.getByText(/Transfer tokens directly between/)).toBeInTheDocument();
-  });
-
-  it('calls onOpenSendModal with correct token when Send ICP button is clicked', () => {
-    render(<InformationTab {...mockProps} />);
-
-    const sendICPButton = screen.getByText('Send ICP');
-    fireEvent.click(sendICPButton);
-
-    expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ICP');
-    expect(mockProps.onOpenSendModal).toHaveBeenCalledTimes(1);
   });
 
   it('calls onOpenSendModal with correct token when Send ckTestBTC button is clicked', () => {
@@ -71,16 +56,6 @@ describe('InformationTab', () => {
 
     expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ckTestBTC');
     expect(mockProps.onOpenSendModal).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onOpenReceiveModal with correct token when Receive ICP button is clicked', () => {
-    render(<InformationTab {...mockProps} />);
-
-    const receiveICPButton = screen.getByText('Receive ICP');
-    fireEvent.click(receiveICPButton);
-
-    expect(mockProps.onOpenReceiveModal).toHaveBeenCalledWith('ICP');
-    expect(mockProps.onOpenReceiveModal).toHaveBeenCalledTimes(1);
   });
 
   it('calls onOpenReceiveModal with correct token when Receive ckTestBTC button is clicked', () => {

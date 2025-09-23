@@ -8,7 +8,7 @@ const mockTransactions: Transaction[] = [
   {
     id: 1,
     tx_type: 'Send',
-    token: 'ICP',
+    token: 'ckTestBTC',
     amount: '10000000',
     from: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
     to: 'rdmx6-jaaaa-aaaah-qcaid-cai',
@@ -52,7 +52,7 @@ const mockTransactions: Transaction[] = [
 const mockProps = {
   transactions: mockTransactions,
   loading: false,
-  onRefreshTransactions: jest.fn(),
+  onRefreshTransactions: vi.fn(),
 };
 
 // Helper function to create more transactions for pagination testing
@@ -60,7 +60,7 @@ const createMockTransactions = (count: number): Transaction[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     tx_type: ['Send', 'Receive', 'Deposit', 'Withdraw'][i % 4] as any,
-    token: i % 2 === 0 ? 'ICP' : 'ckTestBTC',
+    token: 'ckTestBTC',
     amount: ((i + 1) * 1000000).toString(),
     from: `sender-${i}`,
     to: `receiver-${i}`,
@@ -72,7 +72,7 @@ const createMockTransactions = (count: number): Transaction[] => {
 
 describe('TransactionsTab', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders statistics correctly', () => {
@@ -132,12 +132,12 @@ describe('TransactionsTab', () => {
     const tokenSelect = screen.getByDisplayValue('All Tokens');
     fireEvent.click(tokenSelect);
 
-    // Select ICP
-    const icpOption = screen.getByText('ICP');
-    fireEvent.click(icpOption);
+    // Select ckTestBTC
+    const ckTestBTCOption = screen.getByText('ckTestBTC');
+    fireEvent.click(ckTestBTCOption);
 
-    // Should show filtered results - only 1 ICP transaction in mock data
-    expect(screen.getByText('1 of 4')).toBeInTheDocument();
+    // Should show filtered results - 4 ckTestBTC transactions in mock data
+    expect(screen.getByText('4 of 4')).toBeInTheDocument();
   });
 
   it('filters transactions by status', () => {
@@ -340,14 +340,14 @@ describe('TransactionsTab', () => {
 
     const tokenSelect = screen.getByDisplayValue('All Tokens');
     fireEvent.click(tokenSelect);
-    fireEvent.click(screen.getByText('ICP'));
+    fireEvent.click(screen.getByText('ckTestBTC'));
 
     const statusSelect = screen.getByDisplayValue('All Status');
     fireEvent.click(statusSelect);
     fireEvent.click(screen.getByText('Confirmed'));
 
     // Should show combined filter results
-    // This would show transactions that are Send AND ICP AND Confirmed
+    // This would show transactions that are Send AND ckTestBTC AND Confirmed
     expect(screen.getByText('Active filters:')).toBeInTheDocument();
   });
 

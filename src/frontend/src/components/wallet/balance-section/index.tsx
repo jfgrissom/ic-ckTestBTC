@@ -11,6 +11,8 @@ import { calculateMaxAvailable, TokenType } from '@/lib';
 interface BalanceSectionProps {
   walletStatus?: WalletStatus;
   loading: boolean;
+  error?: string | null;
+  initialized?: boolean;
   onRefreshBalance: () => void;
   onFaucet?: () => void;
   onDepositToCustody?: (amount: string) => void;
@@ -20,6 +22,8 @@ interface BalanceSectionProps {
 const BalanceSection: React.FC<BalanceSectionProps> = ({
   walletStatus,
   loading,
+  error,
+  initialized,
   onRefreshBalance,
   onFaucet,
   onDepositToCustody,
@@ -55,6 +59,14 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
                 <RefreshCw className="w-8 h-8 animate-spin" />
                 <span>Loading...</span>
               </div>
+            ) : error ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-red-500 text-lg font-medium">Failed to load balance</div>
+                <Button onClick={onRefreshBalance} variant="outline" size="sm">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
                 <span>{walletStatus?.custodialBalance || '0.00000000'}</span>
@@ -64,8 +76,33 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
               </div>
             )}
           </div>
-          <p className="text-sm text-gray-600">Available in custodial wallet</p>
+          <p className="text-sm text-gray-600">
+            {error ? `Error: ${error}` : 'Available in custodial wallet'}
+          </p>
         </div>
+
+        {/* Initialization Error Alert */}
+        {error && (
+          <Alert className="mb-4 border-red-200 bg-red-50">
+            <Info className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <strong>Initialization Error:</strong> {error}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={onRefreshBalance}
+                  variant="outline"
+                  className="self-start border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Personal Balance Alert */}
         {walletStatus?.canDeposit && (

@@ -10,7 +10,6 @@ import {
   Download,
   Upload,
   Copy,
-  ExternalLink,
   Coins,
   AlertCircle,
   CheckCircle,
@@ -18,36 +17,21 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { cn, formatBalance } from '@/lib';
+import { useWalletBalance, useDepositWithdrawal, useFaucet, useWalletState } from '@/contexts/wallet-context/hooks';
+import { getNetworkConfig } from '@/types/backend.types';
 
-interface DepositsWithdrawalsTabProps {
-  loading: boolean;
-  balance: string;
-  depositAddress?: string;
-  onGetDepositAddress: () => Promise<string>;
-  onFaucet: () => Promise<void>;
-  onOpenDepositModal: () => void;
-  onOpenWithdrawModal: () => void;
-  isLocalDev?: boolean;
-}
-
-const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
-  loading,
-  balance,
-  depositAddress,
-  onGetDepositAddress,
-  onFaucet,
-  onOpenDepositModal,
-  onOpenWithdrawModal,
-  isLocalDev = false,
-}) => {
+const DepositsWithdrawalsTab: React.FC = () => {
+  const { custodialBalance, loading } = useWalletBalance();
+  const { depositAddress, getDepositAddress } = useDepositWithdrawal();
+  const { useFaucet: faucetAction, loading: faucetLoading } = useFaucet();
+  const isLocalDev = getNetworkConfig().network === 'local';
   const [isGettingAddress, setIsGettingAddress] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [faucetLoading, setFaucetLoading] = useState(false);
 
   const handleGetDepositAddress = async () => {
     setIsGettingAddress(true);
     try {
-      await onGetDepositAddress();
+      await getDepositAddress();
     } catch (error) {
       console.error('Error getting deposit address:', error);
     } finally {
@@ -68,14 +52,20 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
   };
 
   const handleFaucet = async () => {
-    setFaucetLoading(true);
     try {
-      await onFaucet();
+      await faucetAction();
     } catch (error) {
       console.error('Error getting test tokens:', error);
-    } finally {
-      setFaucetLoading(false);
     }
+  };
+
+  // TODO: Modal handlers will be implemented with WalletModals component
+  const handleOpenDepositModal = () => {
+    console.log('Deposit modal will be implemented');
+  };
+
+  const handleOpenWithdrawModal = () => {
+    console.log('Withdraw modal will be implemented');
   };
 
 
@@ -91,7 +81,7 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-orange-600">
-            {formatBalance(balance)} ckTestBTC
+            {formatBalance(custodialBalance)} ckTestBTC
           </div>
           <p className="text-sm text-gray-600 mt-2">
             Backed 1:1 by Bitcoin TestNet (Testnet Bitcoin)
@@ -231,7 +221,7 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
 
           <div className="pt-4">
             <Button
-              onClick={onOpenDepositModal}
+              onClick={handleOpenDepositModal}
               variant="default"
               className="w-full"
               size="lg"
@@ -271,7 +261,7 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-lg font-semibold text-gray-900">
-                  {formatBalance(balance)}
+                  {formatBalance(custodialBalance)}
                 </div>
                 <div className="text-sm text-gray-500">Available to Withdraw</div>
               </div>
@@ -298,11 +288,11 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
 
           <div className="pt-4">
             <Button
-              onClick={onOpenWithdrawModal}
+              onClick={handleOpenWithdrawModal}
               variant="default"
               className="w-full"
               size="lg"
-              disabled={parseFloat(balance) === 0}
+              disabled={parseFloat(custodialBalance) === 0}
             >
               <Upload className="h-4 w-4 mr-2" />
               Withdraw ckTestBTC
@@ -319,7 +309,7 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ActionButton
-              onClick={onOpenDepositModal}
+              onClick={handleOpenDepositModal}
               variant="outline"
               className="flex-col h-24 space-y-2"
               icon={<Download className="h-6 w-6" />}
@@ -329,11 +319,11 @@ const DepositsWithdrawalsTab: React.FC<DepositsWithdrawalsTabProps> = ({
             </ActionButton>
 
             <ActionButton
-              onClick={onOpenWithdrawModal}
+              onClick={handleOpenWithdrawModal}
               variant="outline"
               className="flex-col h-24 space-y-2"
               icon={<Upload className="h-6 w-6" />}
-              disabled={parseFloat(balance) === 0}
+              disabled={parseFloat(custodialBalance) === 0}
             >
               <span className="font-medium">Withdraw</span>
               <span className="text-xs text-gray-500">ckTestBTC → Bitcoin TestNet</span>

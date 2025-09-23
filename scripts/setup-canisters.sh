@@ -24,7 +24,7 @@ else
     echo -e "${YELLOW}Checking existing canisters...${NC}"
     
     # List of expected canisters from dfx.json
-    CANISTERS=("backend" "frontend" "internet_identity" "mock_cktestbtc_ledger" "mock_cktestbtc_minter" "mock_icp_ledger")
+    CANISTERS=("backend" "frontend" "internet_identity" "mock_cktestbtc_ledger" "mock_cktestbtc_minter")
     
     # Create any missing canisters
     for canister in "${CANISTERS[@]}"; do

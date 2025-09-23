@@ -41,7 +41,6 @@ const DepositModal: React.FC<DepositModalProps> = ({
   depositAddress = '',
   loading = false,
   depositCapabilities,
-  onDepositToCustody,
 }) => {
   const [address, setAddress] = useState(depositAddress);
   const [copied, setCopied] = useState(false);

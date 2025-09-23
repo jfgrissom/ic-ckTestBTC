@@ -1,63 +1,59 @@
 import React from 'react';
-import TokenBalance from '@/components/shared/token-balance';
 import BalanceSection from '@/components/wallet/balance-section';
 import ActionButton from '@/components/shared/action-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { WalletStatus } from '@/services/wallet.service';
+import { useWalletBalance, useFaucet, useTransfers } from '@/contexts/wallet-context/hooks';
 import {
   ArrowUpDown,
   Download,
   Upload,
   Send,
   ArrowDownToLine,
-  ArrowUpFromLine
 } from 'lucide-react';
 
-interface InformationTabProps {
-  icpBalance: string;
-  ckTestBTCBalance: string;
-  walletStatus?: WalletStatus;
-  loading: boolean;
-  onRefreshBalances: () => void;
-  onOpenSendModal: (token: 'ICP' | 'ckTestBTC') => void;
-  onOpenReceiveModal: (token: 'ICP' | 'ckTestBTC') => void;
-  onOpenDepositModal: () => void;
-  onOpenWithdrawModal: () => void;
-  onFaucet?: () => void;
-  onDepositToCustody?: (amount: string) => void;
-}
+const InformationTab: React.FC = () => {
+  const { walletStatus, loading, error, initialized, refresh } = useWalletBalance();
+  const { useFaucet: handleFaucet } = useFaucet();
+  const { depositToCustody } = useTransfers();
 
-const InformationTab: React.FC<InformationTabProps> = ({
-  icpBalance,
-  ckTestBTCBalance,
-  walletStatus,
-  loading,
-  onRefreshBalances,
-  onOpenSendModal,
-  onOpenReceiveModal,
-  onOpenDepositModal,
-  onOpenWithdrawModal,
-  onFaucet,
-  onDepositToCustody,
-}) => {
+  const handleDepositToCustody = async (amount: string) => {
+    try {
+      await depositToCustody(amount);
+    } catch (error) {
+      console.error('Deposit to custody failed:', error);
+    }
+  };
+
+  // TODO: Modal handlers will be implemented with WalletModals component
+  const handleOpenSendModal = () => {
+    console.log('Send modal will be implemented');
+  };
+
+  const handleOpenReceiveModal = () => {
+    console.log('Receive modal will be implemented');
+  };
+
+  const handleOpenDepositModal = () => {
+    console.log('Deposit modal will be implemented');
+  };
+
+  const handleOpenWithdrawModal = () => {
+    console.log('Withdraw modal will be implemented');
+  };
   return (
     <div className="space-y-6">
       {/* Balances Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Your Balances</h2>
         <div className="grid gap-4">
-          <TokenBalance
-            token="ICP"
-            balance={icpBalance}
-            loading={loading}
-            onRefresh={onRefreshBalances}
-          />
           <BalanceSection
             walletStatus={walletStatus}
             loading={loading}
-            onRefreshBalance={onRefreshBalances}
-            onFaucet={onFaucet}
-            onDepositToCustody={onDepositToCustody}
+            error={error}
+            initialized={initialized}
+            onRefreshBalance={refresh}
+            onFaucet={handleFaucet}
+            onDepositToCustody={handleDepositToCustody}
           />
         </div>
       </div>
@@ -76,25 +72,7 @@ const InformationTab: React.FC<InformationTabProps> = ({
             <h3 className="text-lg font-medium mb-3 text-blue-700">IC Token Operations</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <ActionButton
-                onClick={() => onOpenSendModal('ICP')}
-                variant="outline"
-                className="flex-col h-20 space-y-1"
-                icon={<Send className="h-5 w-5" />}
-              >
-                <span className="text-xs">Send ICP</span>
-              </ActionButton>
-
-              <ActionButton
-                onClick={() => onOpenReceiveModal('ICP')}
-                variant="outline"
-                className="flex-col h-20 space-y-1"
-                icon={<ArrowDownToLine className="h-5 w-5" />}
-              >
-                <span className="text-xs">Receive ICP</span>
-              </ActionButton>
-
-              <ActionButton
-                onClick={() => onOpenSendModal('ckTestBTC')}
+                onClick={handleOpenSendModal}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Send className="h-5 w-5" />}
@@ -103,7 +81,7 @@ const InformationTab: React.FC<InformationTabProps> = ({
               </ActionButton>
 
               <ActionButton
-                onClick={() => onOpenReceiveModal('ckTestBTC')}
+                onClick={handleOpenReceiveModal}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<ArrowDownToLine className="h-5 w-5" />}
@@ -118,7 +96,7 @@ const InformationTab: React.FC<InformationTabProps> = ({
             <h3 className="text-lg font-medium mb-3 text-orange-700">Bitcoin TestNet Operations</h3>
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
-                onClick={onOpenDepositModal}
+                onClick={handleOpenDepositModal}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Download className="h-5 w-5" />}
@@ -127,7 +105,7 @@ const InformationTab: React.FC<InformationTabProps> = ({
               </ActionButton>
 
               <ActionButton
-                onClick={onOpenWithdrawModal}
+                onClick={handleOpenWithdrawModal}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Upload className="h-5 w-5" />}
@@ -144,9 +122,6 @@ const InformationTab: React.FC<InformationTabProps> = ({
         <CardContent className="pt-6">
           <div className="text-sm text-gray-600 space-y-2">
             <h4 className="font-medium text-gray-800">About Your Wallet</h4>
-            <p>
-              • <strong>ICP</strong>: Native Internet Computer token for transactions and governance
-            </p>
             <p>
               • <strong>ckTestBTC</strong>: Chain-key Bitcoin testnet token backed by TestBTC
             </p>

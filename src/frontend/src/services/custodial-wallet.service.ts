@@ -1,6 +1,6 @@
 import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
-import { transferViaLedger, getConnectLedgerActor } from './ledger.service';
+import { getConnectLedgerActor } from './ledger.service';
 import * as backend from 'declarations/backend';
 
 interface CustodialServiceResult {

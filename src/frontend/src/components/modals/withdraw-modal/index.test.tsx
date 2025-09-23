@@ -4,11 +4,11 @@ import '@testing-library/jest-dom';
 import WithdrawModal from './index';
 
 describe('WithdrawModal Component', () => {
-  const mockOnWithdraw = jest.fn();
-  const mockOnOpenChange = jest.fn();
+  const mockOnWithdraw = vi.fn();
+  const mockOnOpenChange = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders when open', () => {

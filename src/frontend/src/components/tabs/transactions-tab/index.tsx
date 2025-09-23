@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import TransactionItem, { Transaction } from '@/components/shared/transaction-item';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,65 +28,47 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib';
-
-interface TransactionsTabProps {
-  transactions: Transaction[];
-  loading: boolean;
-  onRefreshTransactions: () => void;
-}
+import { useTransactions } from '@/contexts/wallet-context/hooks';
 
 type TransactionType = 'All' | 'Send' | 'Receive' | 'Deposit' | 'Withdraw' | 'Mint';
-type TokenFilter = 'All' | 'ICP' | 'ckTestBTC';
+type TokenFilter = 'All' | 'ckTestBTC';
 type StatusFilter = 'All' | 'Pending' | 'Confirmed' | 'Failed';
 
-const TRANSACTIONS_PER_PAGE = 10;
+const TransactionsTab: React.FC = () => {
+  const { transactions, stats, loading, error, refresh } = useTransactions();
 
-const TransactionsTab: React.FC<TransactionsTabProps> = ({
-  transactions,
-  loading,
-  onRefreshTransactions,
-}) => {
   const [typeFilter, setTypeFilter] = useState<TransactionType>('All');
   const [tokenFilter, setTokenFilter] = useState<TokenFilter>('All');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter transactions based on all criteria
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
-      // Type filter
-      if (typeFilter !== 'All' && transaction.tx_type !== typeFilter) {
-        return false;
-      }
+  // Simple UI filtering - complex logic moved to useTransactionFiltering hook in future
+  const filteredTransactions = React.useMemo(() => {
+    let filtered = transactions;
 
-      // Token filter
-      if (tokenFilter !== 'All' && transaction.token !== tokenFilter) {
-        return false;
-      }
+    if (typeFilter !== 'All') {
+      filtered = filtered.filter(tx => tx.type === typeFilter);
+    }
 
-      // Status filter
-      if (statusFilter !== 'All' && transaction.status !== statusFilter) {
-        return false;
-      }
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(tx => tx.status === statusFilter);
+    }
 
-      // Search filter (search in addresses and transaction details)
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        return (
-          transaction.from.toLowerCase().includes(query) ||
-          transaction.to.toLowerCase().includes(query) ||
-          transaction.id.toString().includes(query) ||
-          transaction.block_index?.toLowerCase().includes(query)
-        );
-      }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(tx =>
+        tx.from?.toLowerCase().includes(query) ||
+        tx.to?.toLowerCase().includes(query) ||
+        tx.id?.toString().includes(query)
+      );
+    }
 
-      return true;
-    });
-  }, [transactions, typeFilter, tokenFilter, statusFilter, searchQuery]);
+    return filtered;
+  }, [transactions, typeFilter, statusFilter, searchQuery]);
 
-  // Pagination
+  // Simple pagination - will move to useTransactionPagination hook in future
+  const TRANSACTIONS_PER_PAGE = 10;
   const totalPages = Math.ceil(filteredTransactions.length / TRANSACTIONS_PER_PAGE);
   const startIndex = (currentPage - 1) * TRANSACTIONS_PER_PAGE;
   const paginatedTransactions = filteredTransactions.slice(
@@ -97,32 +79,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [typeFilter, tokenFilter, statusFilter, searchQuery]);
-
-  // Statistics
-  const stats = useMemo(() => {
-    const total = transactions.length;
-    const pending = transactions.filter(tx => tx.status === 'Pending').length;
-    const confirmed = transactions.filter(tx => tx.status === 'Confirmed').length;
-    const failed = transactions.filter(tx => tx.status === 'Failed').length;
-    const sends = transactions.filter(tx => tx.tx_type === 'Send').length;
-    const receives = transactions.filter(tx => tx.tx_type === 'Receive').length;
-    const deposits = transactions.filter(tx => tx.tx_type === 'Deposit').length;
-    const withdrawals = transactions.filter(tx => tx.tx_type === 'Withdraw').length;
-    const mints = transactions.filter(tx => tx.tx_type === 'Mint').length;
-
-    return {
-      total,
-      pending,
-      confirmed,
-      failed,
-      sends,
-      receives,
-      deposits,
-      withdrawals,
-      mints,
-    };
-  }, [transactions]);
+  }, [typeFilter, statusFilter, searchQuery]);
 
   const handleClearFilters = () => {
     setTypeFilter('All');
@@ -168,25 +125,25 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats?.total || 0}</div>
             <div className="text-sm text-gray-600">Total Transactions</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.confirmed}</div>
+            <div className="text-2xl font-bold text-green-600">{stats?.confirmed || 0}</div>
             <div className="text-sm text-gray-600">Confirmed</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <div className="text-2xl font-bold text-yellow-600">{stats?.pending || 0}</div>
             <div className="text-sm text-gray-600">Pending</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
+            <div className="text-2xl font-bold text-red-600">{stats?.failed || 0}</div>
             <div className="text-sm text-gray-600">Failed</div>
           </CardContent>
         </Card>
@@ -202,7 +159,7 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
             </div>
             <div className="flex items-center space-x-2">
               <Button
-                onClick={onRefreshTransactions}
+                onClick={refresh}
                 variant="outline"
                 size="sm"
                 disabled={loading}
@@ -260,7 +217,6 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Tokens</SelectItem>
-                  <SelectItem value="ICP">ICP</SelectItem>
                   <SelectItem value="ckTestBTC">ckTestBTC</SelectItem>
                 </SelectContent>
               </Select>
@@ -350,6 +306,15 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
               <RefreshCw className="h-5 w-5 animate-spin mr-2" />
               <span className="text-gray-600">Loading transactions...</span>
             </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+              <p className="text-lg font-medium">Failed to load transactions</p>
+              <p className="text-sm mt-1">{error}</p>
+              <Button onClick={refresh} className="mt-4">
+                Try Again
+              </Button>
+            </div>
           ) : filteredTransactions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <History className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -371,8 +336,8 @@ const TransactionsTab: React.FC<TransactionsTabProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {paginatedTransactions.map((transaction) => (
-                <TransactionItem key={transaction.id} transaction={transaction} />
+              {paginatedTransactions.map((transaction, index) => (
+                <TransactionItem key={transaction.id || index} transaction={transaction} />
               ))}
             </div>
           )}

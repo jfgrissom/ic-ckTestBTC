@@ -44,15 +44,14 @@ export const formatAmount = (amount: string): string => {
  */
 export const formatTokenBalance = (
   balance: string,
-  _token: 'ICP' | 'ckTestBTC',
+  _token: 'ckTestBTC',
   loading?: boolean
 ): string => {
   if (loading) return 'Loading...';
   if (!balance || balance === '0') return '0.00000000';
 
-  // Both ICP and ckTestBTC use 8 decimal places
+  // ckTestBTC uses 8 decimal places
   // Balance is already formatted by the service layer
-  // The token parameter is kept for future extensibility
   const numBalance = parseFloat(balance);
   return numBalance.toFixed(8);
 };

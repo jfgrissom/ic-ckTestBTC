@@ -5,13 +5,12 @@ import SendReceiveTab from './index';
 import { Transaction } from '@/components/shared/transaction-item';
 
 const mockProps = {
-  icpBalance: '100000000', // 1 ICP in e8s
   ckTestBTCBalance: '50000000', // 0.5 ckTestBTC in satoshis
   userPrincipal: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
   btcAddress: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
   loading: false,
-  onOpenSendModal: jest.fn(),
-  onOpenReceiveModal: jest.fn(),
+  onOpenSendModal: vi.fn(),
+  onOpenReceiveModal: vi.fn(),
   recentTransactions: [],
 };
 
@@ -19,7 +18,7 @@ const mockTransactions: Transaction[] = [
   {
     id: 1,
     tx_type: 'Send',
-    token: 'ICP',
+    token: 'ckTestBTC',
     amount: '10000000',
     from: 'rdmx6-jaaaa-aaaah-qcaiq-cai',
     to: 'rdmx6-jaaaa-aaaah-qcaid-cai',
@@ -53,13 +52,13 @@ const mockTransactions: Transaction[] = [
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    writeText: jest.fn().mockImplementation(() => Promise.resolve()),
+    writeText: vi.fn().mockImplementation(() => Promise.resolve()),
   },
 });
 
 describe('SendReceiveTab', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders token balances correctly', () => {

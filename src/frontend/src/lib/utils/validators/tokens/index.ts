@@ -10,7 +10,6 @@ import {
   DEFAULT_TOKEN
 } from './constants';
 import {
-  TokenOperationOptions,
   TokenFormatResult,
   TokenConversionResult,
   FeeCalculationResult
