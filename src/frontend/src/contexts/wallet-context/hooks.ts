@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Principal } from '@dfinity/principal';
 import { useConnect } from '@connect2ic/react';
 import { useWalletContext } from './index';
-import { TransferCapabilities, DepositWithdrawalCapabilities } from './types';
+import { TransferCapabilities } from './types';
 import {
   refreshWalletData,
   refreshTransactionData,
@@ -90,18 +90,15 @@ export const useTransactions = () => {
   }), [state.transactions, state.transactionStats, state.loading.transactions, state.errors.transactions, dispatch]);
 };
 
-// Transfer operations hook - supports all 4 FEATURES.md scenarios
+// Transfer operations hook - implements Transfer Method Matrix from PRD
 export const useTransfers = () => {
   const { state, dispatch } = useWalletContext();
   const { principal } = useConnect();
 
   return useMemo(() => ({
-    // Transfer functions
-    sendPersonalFunds: (recipient: string, amount: string) =>
-      transferTokens(dispatch, recipient, amount, true), // usePersonalFunds = true
-
-    sendCustodialFunds: (recipient: string, amount: string) =>
-      transferTokens(dispatch, recipient, amount, false), // usePersonalFunds = false
+    // Transfer functions aligned with PRD matrix
+    sendTokens: (recipient: string, amount: string, usePersonalFunds?: boolean) =>
+      transferTokens(dispatch, recipient, amount, usePersonalFunds),
 
     depositToCustody: (amount: string) => {
       if (!principal) {
@@ -114,8 +111,30 @@ export const useTransfers = () => {
     loading: state.loading.operations,
     error: state.errors.operations,
 
+    // Transfer capabilities based on PRD Matrix (Lines 63-67)
+    transferCapabilities: (() => {
+      const personalBalance = parseFloat(state.walletStatus?.personalBalance || '0');
+      const custodialBalance = parseFloat(state.walletStatus?.custodialBalance || '0');
+
+      return {
+        // Row 1: Canister Primary, User Sub, Balance = Yes
+        // Can send via Backend Custodian, Can withdraw, Can deposit
+        canTransferCustodial: custodialBalance > 0,
+
+        // Row 2: User Primary, No Sub, Balance = Yes
+        // Can send via ckTestBTC ledger directly, Can deposit (with caveat)
+        canTransferPersonal: personalBalance > 0,
+
+        // Overall capabilities
+        hasPersonalFunds: personalBalance > 0,
+        hasCustodialFunds: custodialBalance > 0,
+        personalBalance: state.walletStatus?.personalBalance || '0.00000000',
+        custodialBalance: state.walletStatus?.custodialBalance || '0.00000000',
+      };
+    })(),
+
     // Validation function using shared validation layer
-    validateTransfer: (recipient: string, amount: string, usePersonalFunds: boolean): FormValidationResult<{ recipient: string; amount: string; token: TokenType }> => {
+    validateSendInputs: (recipient: string, amount: string, usePersonalFunds?: boolean): FormValidationResult<{ recipient: string; amount: string; token: TokenType }> => {
       // Determine balance based on transfer method
       let currentBalance: string;
       if (state.walletStatus) {
@@ -153,7 +172,7 @@ export const useTransfers = () => {
     },
 
     // Calculate maximum sendable amount
-    calculateMaxSendable: (usePersonalFunds: boolean): string => {
+    calculateMaxSendAmount: (token: TokenType = 'ckTestBTC', usePersonalFunds?: boolean): string => {
       if (!state.walletStatus) return '0';
 
       const formattedBalance = usePersonalFunds
@@ -161,7 +180,7 @@ export const useTransfers = () => {
         : state.walletStatus.custodialBalance;
 
       const currentBalance = Math.floor(parseFloat(formattedBalance) * 100000000).toString();
-      return calculateMaxAvailable(currentBalance, 'ckTestBTC', 'TRANSFER');
+      return calculateMaxAvailable(currentBalance, token, 'TRANSFER');
     },
   }), [state.walletStatus, state.loading.operations, state.errors.operations, principal, dispatch]);
 };
@@ -201,21 +220,73 @@ export const useDepositWithdrawal = () => {
   return useMemo(() => ({
     // Operations
     getDepositAddress: () => getDepositAddressAction(dispatch),
-    withdraw: (address: string, amount: string) => withdrawTokens(dispatch, address, amount),
+
+    // PRD Matrix compliant withdrawal - only from custodial
+    withdrawFromCustody: async (address: string, amount: string, usePersonalFunds?: boolean) => {
+      // PRD Matrix: Only custodial funds can be withdrawn (Row 1)
+      if (usePersonalFunds) {
+        throw new Error('Personal funds cannot be withdrawn directly. Transfer to custodial first.');
+      }
+      return withdrawTokens(dispatch, address, amount);
+    },
+
+    // Validation for withdrawals
+    validateWithdrawInputs: (address: string, amount: string): FormValidationResult<{ address: string; amount: string }> => {
+      const currentBalance = state.walletStatus?.custodialBalance || '0';
+      const balanceInSatoshis = Math.floor(parseFloat(currentBalance) * 100000000).toString();
+
+      const rules: FormValidationRule<{ address: string; amount: string }>[] = [
+        {
+          field: 'address',
+          validator: (addr) => ({
+            valid: addr.startsWith('tb1') && addr.length > 20,
+            normalizedValue: addr,
+            addressType: 'bitcoin-testnet'
+          }),
+          required: true,
+          label: 'Bitcoin TestNet Address'
+        },
+        {
+          field: 'amount',
+          validator: (amt) => validateAndConvertAmount(amt, {
+            balance: balanceInSatoshis,
+            token: 'ckTestBTC',
+            includesFees: true,
+            operationType: 'WITHDRAW'
+          }),
+          required: true,
+          label: 'Amount'
+        }
+      ];
+
+      return validateForm({ address, amount }, rules);
+    },
+
+    // Calculate max withdrawable (only from custodial)
+    calculateMaxWithdrawAmount: (): string => {
+      const currentBalance = state.walletStatus?.custodialBalance || '0';
+      const balanceInSatoshis = Math.floor(parseFloat(currentBalance) * 100000000).toString();
+      return calculateMaxAvailable(balanceInSatoshis, 'ckTestBTC', 'WITHDRAW');
+    },
 
     // State
     depositAddress: state.depositAddress,
     loading: state.loading.operations,
     error: state.errors.operations,
 
-    // Capabilities
-    getCapabilities: (): DepositWithdrawalCapabilities => {
+    // Capabilities aligned with PRD Matrix
+    depositWithdrawalCapabilities: (() => {
       const personalBalance = parseFloat(state.walletStatus?.personalBalance || '0');
       const custodialBalance = parseFloat(state.walletStatus?.custodialBalance || '0');
 
       return {
+        // Matrix Row 1: Canister has custody
         canWithdrawFromCustodial: custodialBalance > 0,
-        canWithdrawFromPersonal: false, // Personal funds cannot be withdrawn directly
+
+        // Matrix Row 2: User has direct control - cannot withdraw
+        canWithdrawFromPersonal: false,
+
+        // Deposit capabilities
         canDepositFromCustodial: custodialBalance > 0,
         canDepositFromPersonal: personalBalance > 0,
         canCreateBtcAccount: custodialBalance === 0 && personalBalance === 0,
@@ -227,7 +298,7 @@ export const useDepositWithdrawal = () => {
         requiresSubaccountCreation: personalBalance > 0 && custodialBalance === 0,
         requiresBtcAddressCreation: personalBalance === 0 && custodialBalance === 0,
       };
-    },
+    })(),
   }), [state.walletStatus, state.depositAddress, state.loading.operations, state.errors.operations, dispatch]);
 };
 

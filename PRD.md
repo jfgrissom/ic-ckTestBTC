@@ -16,7 +16,8 @@ Users need a simple, intuitive interface to:
 - Track transaction history across multiple token types
 - Securely authenticate via Internet Identity
 
-**IMPORTANT**: This application works exclusively with **Bitcoin testnet4** (TestBTC). No mainnet Bitcoin (BTC) is involved.
+**IMPORTANT**: This application works exclusively with **Bitcoin testnet4**
+(TestBTC). No mainnet Bitcoin (BTC) is involved.
 
 ## Solution
 
@@ -58,7 +59,8 @@ integration with IC mainnet canisters.
 
 #### Transfer Method Matrix
 
-The wallet supports multiple operations based on account ownership and balance location:
+The wallet supports multiple operations based on account ownership and balance
+location:
 
 | Primary Account | Sub Account | Account Balance | Send ckTestBTC via Backend Custodian | Send ckTestBTC via ckTestBTC ledger | Withdraw from Backend Custodian | Deposit to Backend Custodian                              |
 | --------------- | ----------- | --------------- | ------------------------------------ | ----------------------------------- | ------------------------------- | --------------------------------------------------------- |
@@ -67,10 +69,21 @@ The wallet supports multiple operations based on account ownership and balance l
 | Canister        | User        | No              | No                                   | No                                  | No                              | Yes (caveat: BTC TestNet account must be created first)   |
 | User            |             | No              | No                                   | No                                  | No                              | No                                                        |
 
+#### ckTestBTC Minting Matrix
+
+| Environment | Wallet Type   | Minting Source      | Target Principal   | Target Subaccount        | Minting Method             | Physical BTC Required | Use Case                          |
+| ----------- | ------------- | ------------------- | ------------------ | ------------------------ | -------------------------- | --------------------- | --------------------------------- |
+| **DEV**     | Non-Custodial | Local Faucet        | User Principal     | Default (null)           | Direct to Minter           | ❌ No                 | Local development testing         |
+| **DEV**     | Custodial     | Local Faucet        | Canister Principal | User-specific subaccount | Direct to Minter           | ❌ No                 | Local custodial wallet testing    |
+| **PRD**     | Non-Custodial | TestNet BTC Deposit | User Principal     | Default (null)           | BTC → ckTestBTC conversion | ✅ Yes                | User owns personal ckTestBTC      |
+| **PRD**     | Custodial     | TestNet BTC Deposit | Canister Principal | User-specific subaccount | BTC → ckTestBTC conversion | ✅ Yes                | Custodial service holds ckTestBTC |
+
 **Operation Method Logic:**
 
 **Send Operations:**
-- **Backend Custodian**: Used for custodial funds (canister-controlled subaccounts)
+
+- **Backend Custodian**: Used for custodial funds (canister-controlled
+  subaccounts)
   - Backend canister has authority to transfer from user's custodial subaccount
   - Enables instant transfers within the custodial system
   - Requires registered subaccount with available balance
@@ -80,19 +93,23 @@ The wallet supports multiple operations based on account ownership and balance l
   - User maintains full control of their personal account
 
 **Withdrawal Operations:**
-- **Backend Custodian Only**: Only custodial funds can be withdrawn to Bitcoin testnet
+
+- **Backend Custodian Only**: Only custodial funds can be withdrawn to Bitcoin
+  testnet
   - Converts ckTestBTC from custodial balance to TestBTC on Bitcoin testnet
   - Requires custodial subaccount with available balance
   - Personal funds must be deposited to custodial first before withdrawal
 
 **Deposit Operations:**
+
 - **To Backend Custodian**: Moves personal funds into custodial management
   - Row 1: Direct deposit from existing personal balance
   - Row 2: Creates custodial subaccount, then deposits personal funds
   - Row 3: Creates Bitcoin testnet address, enables future TestBTC deposits
   - Row 4: No operation possible (no funds available)
 
-**Security**: No delegation mechanisms - each method only operates on accounts it controls
+**Security**: No delegation mechanisms - each method only operates on accounts
+it controls
 
 - **Mint (Onboard)**: Convert **TestBTC** → ckTestBTC
   1. Get Bitcoin testnet deposit address
@@ -117,11 +134,12 @@ Comprehensive audit trail with categorization:
 - **ckTestBTC Mints**: Conversion from **TestBTC** → ckTestBTC
 - **ckTestBTC Sends**: Outgoing ICRC-1 transfers
 - **ckTestBTC Receives**: Incoming ICRC-1 transfers
-- **ckTestBTC Burns**: Conversion ckTestBTC → **TestBTC** 
+- **ckTestBTC Burns**: Conversion ckTestBTC → **TestBTC**
 - **TestBTC Withdrawals**: Bitcoin testnet4 withdrawals (with txid)
 - **ICP Sends/Receives**: ICP ledger operations
 
-**Note**: All Bitcoin operations use **testnet4** only. No mainnet Bitcoin (BTC) involved.
+**Note**: All Bitcoin operations use **testnet4** only. No mainnet Bitcoin (BTC)
+involved.
 
 ### 5. Internet Identity Integration
 
@@ -137,7 +155,8 @@ Comprehensive audit trail with categorization:
 - **ckTestBTC**: ICRC-1/ICRC-2 token on IC mainnet (represents TestBTC 1:1)
 - **ICP**: ICP ledger token on IC mainnet (for transaction fees)
 
-**CRITICAL**: This application handles **TestBTC only**. Zero mainnet Bitcoin (BTC) exposure.
+**CRITICAL**: This application handles **TestBTC only**. Zero mainnet Bitcoin
+(BTC) exposure.
 
 ### Canister Architecture
 
@@ -298,7 +317,8 @@ ic-ckTestBTC/
 
 - **Testnet Only**: **ZERO mainnet Bitcoin (BTC) exposure** - TestBTC only
 - **Authentication**: Secure Internet Identity integration
-- **Address Validation**: Proper Bitcoin **testnet4** address format validation (tb1q...)
+- **Address Validation**: Proper Bitcoin **testnet4** address format validation
+  (tb1q...)
 - **Transaction Verification**: Confirmation of all operations before execution
 - **Network Isolation**: All Bitcoin operations restricted to testnet4 network
 

@@ -22,11 +22,9 @@ import DepositsWithdrawalsTab from '@/components/tabs/deposits-withdrawals-tab';
 import SendReceiveTab from '@/components/tabs/send-receive-tab';
 import TransactionsTab from '@/components/tabs/transactions-tab';
 
-// Modal Components - TODO: Implement these modals
-// import DepositModal from '@/components/modals/deposit-modal';
-// import WithdrawModal from '@/components/modals/withdraw-modal';
-// import SendModal from '@/components/modals/send-modal';
-// import ReceiveModal from '@/components/modals/receive-modal';
+// Modal Components
+import { ModalProvider } from '@/contexts/modal-context';
+import ModalRenderer from '@/components/shared/modal-renderer';
 
 // UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -116,7 +114,9 @@ const Connect2ICWrapper: React.FC = () => {
   return (
     <Connect2ICProvider client={client}>
       <WalletProvider>
-        <AppContent />
+        <ModalProvider>
+          <AppContent />
+        </ModalProvider>
       </WalletProvider>
     </Connect2ICProvider>
   );
@@ -171,7 +171,8 @@ const AppContent: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* TODO: Modals will be handled by WalletModals component */}
+        {/* Modal Renderer */}
+        <ModalRenderer />
       </main>
     </div>
   );

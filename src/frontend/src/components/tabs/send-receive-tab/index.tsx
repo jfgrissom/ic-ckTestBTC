@@ -1,47 +1,32 @@
 import React, { useState } from 'react';
 import ActionButton from '@/components/shared/action-button';
-import TransactionItem, { Transaction } from '@/components/shared/transaction-item';
+import TransactionItem from '@/components/shared/transaction-item';
 import QRCode from '@/components/shared/qr-code';
+import TokenBalance from '@/components/shared/token-balance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Send,
   ArrowDownToLine,
   Copy,
   CheckCircle,
-  Coins,
   Clock,
   TrendingUp,
   RefreshCw
 } from 'lucide-react';
-import { cn } from '@/lib';
-import { useWalletBalance, useWalletState, useTransactions } from '@/contexts/wallet-context/hooks';
+import { useWalletBalance, useWalletState, useTransactions, useWalletActions } from '@/contexts/wallet-context/hooks';
+import { useModals } from '@/hooks/use-modals';
 
 const SendReceiveTab: React.FC = () => {
   const { totalAvailable, loading } = useWalletBalance();
-  const { principal, btcAddress } = useWalletState();
+  const { principal } = useWalletState();
   const { getRecent } = useTransactions();
+  const { refreshWallet } = useWalletActions();
+  const { openModal } = useModals();
   const recentTransactions = getRecent(5);
 
   const [isCopied, setIsCopied] = useState(false);
-
-  const formatBalance = (balance: string) => {
-    const numBalance = parseFloat(balance);
-    return numBalance.toFixed(8);
-  };
-
-  // TODO: Modal handlers will be implemented with WalletModals component
-  const handleOpenSendModal = () => {
-    console.log('Send modal will be implemented');
-  };
-
-  const handleOpenReceiveModal = () => {
-    console.log('Receive modal will be implemented');
-  };
 
   const handleCopyPrincipal = async () => {
     if (!principal) return;
@@ -57,22 +42,14 @@ const SendReceiveTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Balance Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Coins className="h-5 w-5 text-orange-600" />
-            <span>Available Balance</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-orange-600">
-            {formatBalance(totalAvailable)} ckTestBTC
-          </div>
-          <p className="text-sm text-gray-600 mt-1">
-            Ready to send or receive
-          </p>
-        </CardContent>
-      </Card>
+      <TokenBalance
+        token="ckTestBTC"
+        balance={totalAvailable}
+        title="Available Balance"
+        description="Ready to send or receive"
+        loading={loading}
+        onRefresh={refreshWallet}
+      />
 
       {/* Send & Receive Actions */}
       <Card>
@@ -91,16 +68,18 @@ const SendReceiveTab: React.FC = () => {
 
             <TabsContent value="send" className="space-y-4 mt-6">
               <div className="space-y-4">
-                <div>
-                  <div className="text-3xl font-bold text-orange-600">
-                    {formatBalance(totalAvailable)} ckTestBTC
-                  </div>
-                  <p className="text-sm text-gray-600">Available to send</p>
-                </div>
+                <TokenBalance
+                  token="ckTestBTC"
+                  balance={totalAvailable}
+                  description="Available to send"
+                  loading={loading}
+                  onRefresh={refreshWallet}
+                  showBadge={false}
+                />
 
                 <div className="grid grid-cols-1 gap-4">
                   <ActionButton
-                    onClick={handleOpenSendModal}
+                    onClick={() => openModal('send')}
                     variant="outline"
                     className="flex-col h-20 space-y-1"
                     icon={<Send className="h-5 w-5" />}
@@ -146,7 +125,7 @@ const SendReceiveTab: React.FC = () => {
 
                 <div className="grid grid-cols-1 gap-4">
                   <ActionButton
-                    onClick={handleOpenReceiveModal}
+                    onClick={() => openModal('receive')}
                     variant="outline"
                     className="flex-col h-20 space-y-1"
                     icon={<ArrowDownToLine className="h-5 w-5" />}

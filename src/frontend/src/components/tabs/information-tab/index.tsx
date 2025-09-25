@@ -3,6 +3,7 @@ import BalanceSection from '@/components/wallet/balance-section';
 import ActionButton from '@/components/shared/action-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useWalletBalance, useFaucet, useTransfers } from '@/contexts/wallet-context/hooks';
+import { useModals } from '@/hooks/use-modals';
 import {
   ArrowUpDown,
   Download,
@@ -15,6 +16,7 @@ const InformationTab: React.FC = () => {
   const { walletStatus, loading, error, initialized, refresh } = useWalletBalance();
   const { useFaucet: handleFaucet, loading: faucetLoading } = useFaucet();
   const { depositToCustody } = useTransfers();
+  const { openModal } = useModals();
 
   const handleDepositToCustody = async (amount: string) => {
     try {
@@ -22,23 +24,6 @@ const InformationTab: React.FC = () => {
     } catch (error) {
       console.error('Deposit to custody failed:', error);
     }
-  };
-
-  // TODO: Modal handlers will be implemented with WalletModals component
-  const handleOpenSendModal = () => {
-    console.log('Send modal will be implemented');
-  };
-
-  const handleOpenReceiveModal = () => {
-    console.log('Receive modal will be implemented');
-  };
-
-  const handleOpenDepositModal = () => {
-    console.log('Deposit modal will be implemented');
-  };
-
-  const handleOpenWithdrawModal = () => {
-    console.log('Withdraw modal will be implemented');
   };
   return (
     <div className="space-y-6">
@@ -73,7 +58,7 @@ const InformationTab: React.FC = () => {
             <h3 className="text-lg font-medium mb-3 text-blue-700">IC Token Operations</h3>
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
-                onClick={handleOpenSendModal}
+                onClick={() => openModal('send')}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Send className="h-5 w-5" />}
@@ -82,7 +67,7 @@ const InformationTab: React.FC = () => {
               </ActionButton>
 
               <ActionButton
-                onClick={handleOpenReceiveModal}
+                onClick={() => openModal('receive')}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<ArrowDownToLine className="h-5 w-5" />}
@@ -97,7 +82,7 @@ const InformationTab: React.FC = () => {
             <h3 className="text-lg font-medium mb-3 text-orange-700">Bitcoin TestNet Operations</h3>
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
-                onClick={handleOpenDepositModal}
+                onClick={() => openModal('deposit')}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Download className="h-5 w-5" />}
@@ -106,7 +91,7 @@ const InformationTab: React.FC = () => {
               </ActionButton>
 
               <ActionButton
-                onClick={handleOpenWithdrawModal}
+                onClick={() => openModal('withdraw')}
                 variant="outline"
                 className="flex-col h-20 space-y-1"
                 icon={<Upload className="h-5 w-5" />}

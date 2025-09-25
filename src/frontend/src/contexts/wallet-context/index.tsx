@@ -42,15 +42,42 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [backendActor] = useCanister('backend');
   const [ckTestBTCLedgerActor] = useCanister('ckTestBTCLedger');
 
+  // Track previous principal to detect user changes
+  const prevPrincipalRef = useRef<string | null>(null);
+
   // 1. Handle authentication state changes
   useEffect(() => {
+    const currentPrincipal = principal || null;
+    const prevPrincipal = prevPrincipalRef.current;
+
+    // Check if user changed (different principal)
+    const userChanged = prevPrincipal !== null &&
+                       currentPrincipal !== null &&
+                       prevPrincipal !== currentPrincipal;
+
     dispatch({
       type: 'AUTH_CHANGED',
       payload: {
         isAuthenticated: isConnected,
-        principal: principal || null,
+        principal: currentPrincipal,
       },
     });
+
+    // CRITICAL: Clear backend actor when user logs out or changes
+    // This prevents using cached actors from previous authentication sessions
+    if (!isConnected) {
+      console.log('[WalletProvider] User logged out - clearing backend actor');
+      setBackendActor(null);
+    } else if (userChanged) {
+      console.log('[WalletProvider] User changed - clearing backend actor', {
+        from: prevPrincipal,
+        to: currentPrincipal
+      });
+      setBackendActor(null);
+    }
+
+    // Update previous principal reference
+    prevPrincipalRef.current = currentPrincipal;
   }, [isConnected, principal]);
 
   // 2. Handle backend actor lifecycle management - Event-driven approach with validation

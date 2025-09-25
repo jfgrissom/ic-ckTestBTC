@@ -57,13 +57,18 @@ export const walletReducer = (state: WalletState, action: WalletAction): WalletS
         };
       }
 
+      // Check if this is a different user logging in
+      const isDifferentUser = state.principal &&
+                              state.principal !== action.payload.principal;
+
       // User logged in - prepare for data loading but don't start loading yet
+      // If it's a different user, clear previous user's data
       return {
-        ...state,
+        ...(isDifferentUser ? initialWalletState : state),
         isAuthenticated: action.payload.isAuthenticated,
         principal: action.payload.principal,
         loading: {
-          ...state.loading,
+          ...initialWalletState.loading,
           initial: false, // Reset loading state - initialization will set this when it starts
         },
         errors: {

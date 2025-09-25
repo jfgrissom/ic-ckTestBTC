@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import ActionButton from '@/components/shared/action-button';
 import QRCode from '@/components/shared/qr-code';
+import TokenBalance from '@/components/shared/token-balance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Download,
@@ -16,14 +16,17 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react';
-import { cn, formatBalance } from '@/lib';
-import { useWalletBalance, useDepositWithdrawal, useFaucet, useWalletState } from '@/contexts/wallet-context/hooks';
+import { cn } from '@/lib';
+import { useWalletBalance, useDepositWithdrawal, useFaucet, useWalletActions } from '@/contexts/wallet-context/hooks';
+import { useModals } from '@/hooks/use-modals';
 import { getNetworkConfig } from '@/types/backend.types';
 
 const DepositsWithdrawalsTab: React.FC = () => {
   const { custodialBalance, loading } = useWalletBalance();
   const { depositAddress, getDepositAddress } = useDepositWithdrawal();
   const { useFaucet: faucetAction, loading: faucetLoading } = useFaucet();
+  const { refreshWallet } = useWalletActions();
+  const { openModal } = useModals();
   const isLocalDev = getNetworkConfig().network === 'local';
   const [isGettingAddress, setIsGettingAddress] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -59,35 +62,18 @@ const DepositsWithdrawalsTab: React.FC = () => {
     }
   };
 
-  // TODO: Modal handlers will be implemented with WalletModals component
-  const handleOpenDepositModal = () => {
-    console.log('Deposit modal will be implemented');
-  };
-
-  const handleOpenWithdrawModal = () => {
-    console.log('Withdraw modal will be implemented');
-  };
-
 
   return (
     <div className="space-y-6">
       {/* Current Balance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Coins className="h-5 w-5 text-orange-600" />
-            <span>ckTestBTC Balance</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-orange-600">
-            {formatBalance(custodialBalance)} ckTestBTC
-          </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Backed 1:1 by Bitcoin TestNet (Testnet Bitcoin)
-          </p>
-        </CardContent>
-      </Card>
+      <TokenBalance
+        token="ckTestBTC"
+        balance={custodialBalance}
+        title="ckTestBTC Balance"
+        description="Backed 1:1 by Bitcoin TestNet (Testnet Bitcoin)"
+        loading={loading}
+        onRefresh={refreshWallet}
+      />
 
       {/* Faucet Section (Local Dev Only) */}
       {isLocalDev && (
@@ -221,7 +207,7 @@ const DepositsWithdrawalsTab: React.FC = () => {
 
           <div className="pt-4">
             <Button
-              onClick={handleOpenDepositModal}
+              onClick={() => openModal('deposit')}
               variant="default"
               className="w-full"
               size="lg"
@@ -259,12 +245,15 @@ const DepositsWithdrawalsTab: React.FC = () => {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-lg font-semibold text-gray-900">
-                  {formatBalance(custodialBalance)}
-                </div>
-                <div className="text-sm text-gray-500">Available to Withdraw</div>
-              </div>
+              <TokenBalance
+                token="ckTestBTC"
+                balance={custodialBalance}
+                description="Available to Withdraw"
+                loading={loading}
+                onRefresh={refreshWallet}
+                showBadge={false}
+                className="col-span-1"
+              />
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-lg font-semibold text-gray-900">
                   ~0.00001
@@ -288,7 +277,7 @@ const DepositsWithdrawalsTab: React.FC = () => {
 
           <div className="pt-4">
             <Button
-              onClick={handleOpenWithdrawModal}
+              onClick={() => openModal('withdraw')}
               variant="default"
               className="w-full"
               size="lg"
@@ -309,7 +298,7 @@ const DepositsWithdrawalsTab: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ActionButton
-              onClick={handleOpenDepositModal}
+              onClick={() => openModal('deposit')}
               variant="outline"
               className="flex-col h-24 space-y-2"
               icon={<Download className="h-6 w-6" />}
@@ -319,7 +308,7 @@ const DepositsWithdrawalsTab: React.FC = () => {
             </ActionButton>
 
             <ActionButton
-              onClick={handleOpenWithdrawModal}
+              onClick={() => openModal('withdraw')}
               variant="outline"
               className="flex-col h-24 space-y-2"
               icon={<Upload className="h-6 w-6" />}

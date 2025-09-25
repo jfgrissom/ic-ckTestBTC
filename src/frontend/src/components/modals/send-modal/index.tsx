@@ -49,6 +49,7 @@ const SendModal: React.FC<SendModalProps> = ({
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [usePersonalFunds, setUsePersonalFunds] = useState(true); // Default to personal funds (direct ledger)
+  const [isSubmitting, setIsSubmitting] = useState(false); // Local loading state for instant feedback
 
   // Update transfer method selection when capabilities change
   React.useEffect(() => {
@@ -128,6 +129,7 @@ const SendModal: React.FC<SendModalProps> = ({
   const handleSend = async () => {
     if (!validateInputs()) return;
 
+    setIsSubmitting(true); // Instant feedback - disable button immediately
     try {
       // Note: Amount conversion is now handled by the validation layer
       // The parent component should handle conversion when calling onSend
@@ -136,6 +138,8 @@ const SendModal: React.FC<SendModalProps> = ({
       handleClose();
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Send transaction failed' });
+    } finally {
+      setIsSubmitting(false); // Re-enable button if there's an error
     }
   };
 
@@ -145,6 +149,7 @@ const SendModal: React.FC<SendModalProps> = ({
     setUsePersonalFunds(true); // Reset to default (personal funds)
     setErrors({});
     setDetails({});
+    setIsSubmitting(false); // Reset loading state
     onOpenChange(false);
   };
 
@@ -362,12 +367,13 @@ const SendModal: React.FC<SendModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting || loading}>
             Cancel
           </Button>
           <Button
             onClick={handleSend}
             disabled={
+              isSubmitting ||
               loading ||
               !recipient ||
               !amount ||
@@ -376,7 +382,7 @@ const SendModal: React.FC<SendModalProps> = ({
                !transferCapabilities.canTransferCustodial)
             }
           >
-            {loading ? 'Sending...' : `Send ckTestBTC`}
+            {isSubmitting || loading ? 'Sending...' : `Send ckTestBTC`}
           </Button>
         </DialogFooter>
       </DialogContent>

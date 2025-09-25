@@ -35,7 +35,7 @@ This document lists the core features of the ckTestBTC Wallet application.
 
 - ✅ **Service Initialization Loader**
   - On initial page load a status loading is presented to the user.
-- **Balance Display**
+- ✅ **Balance Display**
   - **Information Tab**
     - Balance is displayed on initial page load.
 - **Sending & Receiving ckTestBTC**
@@ -60,3 +60,6 @@ This document lists the core features of the ckTestBTC Wallet application.
 - 🤔 **Address Book:** Save frequently used recipient addresses.
 - 🤔 **Multi-Asset Support:** Add support for other cryptocurrencies.
 - 🤔 **Mobile Optimization:** Improve the user experience on mobile devices.
+- 🤔 **Ability to Schedule Gift Delivery:** Implement a system that allows for a
+  future delivery date (great for holiday gifts in bulk or a birthday that wants
+  to be delivered on a certain date).
