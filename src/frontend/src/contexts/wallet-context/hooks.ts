@@ -307,10 +307,15 @@ export const useFaucet = () => {
   const { state, dispatch } = useWalletContext();
 
   return useMemo(() => ({
-    useFaucet: () => useFaucetTokens(dispatch),
+    useFaucet: () => {
+      if (!state.principal) {
+        throw new Error('User principal not available for faucet operation');
+      }
+      return useFaucetTokens(dispatch, state.principal);
+    },
     loading: state.loading.operations,
     error: state.errors.operations,
-  }), [state.loading.operations, state.errors.operations, dispatch]);
+  }), [state.loading.operations, state.errors.operations, state.principal, dispatch]);
 };
 
 // Authentication hook

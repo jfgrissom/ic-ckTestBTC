@@ -2,7 +2,7 @@ import React from 'react';
 import BalanceSection from '@/components/wallet/balance-section';
 import ActionButton from '@/components/shared/action-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useWalletBalance, useFaucet, useTransfers } from '@/contexts/wallet-context/hooks';
+import { useWalletBalance, useTransfers } from '@/contexts/wallet-context/hooks';
 import { useModals } from '@/hooks/use-modals';
 import {
   ArrowUpDown,
@@ -14,7 +14,6 @@ import {
 
 const InformationTab: React.FC = () => {
   const { walletStatus, loading, error, initialized, refresh } = useWalletBalance();
-  const { useFaucet: handleFaucet, loading: faucetLoading } = useFaucet();
   const { depositToCustody } = useTransfers();
   const { openModal } = useModals();
 
@@ -37,9 +36,7 @@ const InformationTab: React.FC = () => {
             error={error}
             initialized={initialized}
             onRefreshBalance={refresh}
-            onFaucet={handleFaucet}
             onDepositToCustody={handleDepositToCustody}
-            faucetLoading={faucetLoading}
           />
         </div>
       </div>

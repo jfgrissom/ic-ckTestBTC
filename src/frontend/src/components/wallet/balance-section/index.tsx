@@ -1,10 +1,9 @@
 import React from 'react';
-import { getNetworkConfig } from '@/types/backend.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { RefreshCw, Coins, ArrowDown, Info } from 'lucide-react';
+import { RefreshCw, ArrowDown, Info } from 'lucide-react';
 import { WalletStatus } from '@/services/wallet.service';
 import { calculateMaxAvailable, TokenType } from '@/lib';
 
@@ -14,10 +13,7 @@ interface BalanceSectionProps {
   error?: string | null;
   initialized?: boolean;
   onRefreshBalance: () => void;
-  onFaucet?: () => void;
   onDepositToCustody?: (amount: string) => void;
-  showFaucet?: boolean;
-  faucetLoading?: boolean;
 }
 
 const BalanceSection: React.FC<BalanceSectionProps> = ({
@@ -26,10 +22,7 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
   error,
   initialized: _initialized,
   onRefreshBalance,
-  onFaucet,
   onDepositToCustody,
-  showFaucet = getNetworkConfig().network === 'local',
-  faucetLoading = false,
 }) => {
   const handleDepositMax = () => {
     if (walletStatus?.personalBalance && onDepositToCustody) {
@@ -145,7 +138,7 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col md:flex-row gap-3 justify-center">
+          <div className="flex justify-center">
             <Button
               onClick={onRefreshBalance}
               disabled={loading}
@@ -155,26 +148,14 @@ const BalanceSection: React.FC<BalanceSectionProps> = ({
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh Balance
             </Button>
-
-            {showFaucet && onFaucet && (
-              <Button
-                onClick={onFaucet}
-                disabled={loading || faucetLoading}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <Coins className={`w-4 h-4 ${faucetLoading ? 'animate-spin' : ''}`} />
-                {faucetLoading ? 'Minting Tokens...' : 'Get Test Tokens (Faucet)'}
-              </Button>
-            )}
           </div>
 
-          {/* Show faucet note when balances are zero */}
+          {/* Note: Faucet button removed - single faucet interface now in Deposits & Withdrawals tab */}
           {walletStatus &&
            walletStatus.custodialBalance === '0.00000000' &&
-           walletStatus.personalBalance === '0.00000000' &&
-           showFaucet && (
+           walletStatus.personalBalance === '0.00000000' && (
             <div className="text-center text-sm text-gray-600 mt-2">
-              Use the faucet to get test tokens, then they will appear in your personal balance.
+              Go to the <strong>Deposits & Withdrawals</strong> tab to get test tokens with the faucet.
             </div>
           )}
         </div>

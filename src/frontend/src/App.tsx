@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Connect2ICProvider } from '@connect2ic/react';
-import { createClient } from '@connect2ic/core';
-import { InternetIdentity } from '@connect2ic/core/providers/internet-identity';
-import { NFID } from '@connect2ic/core/providers/nfid';
 import '@connect2ic/core/style.css';
+import { createConnect2ICClient } from '@/config/connect2ic';
 import { initializeServices } from '@/services/initialization';
 import LoadingScreen from '@/components/shared/loading-screen';
-import * as backend from 'declarations/backend';
-import * as mockLedger from 'declarations/mock_cktestbtc_ledger';
 
 import { WalletProvider } from '@/contexts/wallet-context';
 import { useAuthentication } from '@/contexts/wallet-context/hooks';
@@ -41,57 +37,12 @@ const Connect2ICWrapper: React.FC = () => {
   useEffect(() => {
     const setupConnect2IC = async () => {
       try {
-        // Environment detection
-        const isDev = import.meta.env.DEV;
-
-        // Configure Internet Identity provider based on environment
-        const internetIdentityConfig = isDev ? {
-          // Local development configuration - using modern dfx localhost format
-          host: 'http://localhost:4943',
-          providerUrl: `http://${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY}.localhost:4943`,
-          dev: true
-        } : {
-          // Production configuration - using Internet Identity v2 (id.ai)
-          providerUrl: 'https://id.ai',
-          dev: false
-        };
-
-        // Debug backend module
-        console.log('Backend module for Connect2IC:', {
-          hasBackend: !!backend.backend,
-          canisterId: backend.canisterId,
-          hasIdlFactory: !!backend.idlFactory,
-          hasCreateActor: !!backend.createActor
-        });
-
-        // Create the Connect2IC client with type assertion for IDL factory compatibility
-        // NOTE: Connect2IC uses a different @dfinity/candid version requiring this type workaround
-        const connect2icClient = createClient({
-          canisters: {
-            backend: {
-              canisterId: backend.canisterId,
-              // @ts-expect-error: Connect2IC library type incompatibility with @dfinity/candid versions
-              idlFactory: backend.idlFactory,
-            },
-            ckTestBTCLedger: {
-              canisterId: mockLedger.canisterId,
-              // @ts-expect-error: Connect2IC library type incompatibility with @dfinity/candid versions
-              idlFactory: mockLedger.idlFactory,
-            },
-          },
-          providers: [
-            new InternetIdentity(internetIdentityConfig),
-            new NFID()
-          ],
-          globalProviderConfig: {
-            dev: isDev,
-            host: isDev ? 'http://localhost:4943' : 'https://ic0.app',
-          }
-        });
-
+        console.log('[App] Setting up Connect2IC client...');
+        const connect2icClient = await createConnect2ICClient();
         setClient(connect2icClient);
+        console.log('[App] Connect2IC client setup complete');
       } catch (error) {
-        console.error('Failed to setup Connect2IC:', error);
+        console.error('[App] Failed to setup Connect2IC:', error);
       }
     };
 
@@ -180,7 +131,7 @@ const AppContent: React.FC = () => {
 
 /**
  * Main App component with service initialization and loading state
- * Based on the gifty-crypto platform pattern
+ * Based on the crypto platform initialization pattern
  */
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);

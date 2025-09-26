@@ -1,5 +1,6 @@
 import { WalletAction } from './types';
-import { getWalletStatus, getBtcAddress, transfer, useFaucet } from '@/services/wallet.service';
+import { getWalletStatus, getBtcAddress, transfer } from '@/services/wallet.service';
+import { useFaucetDirect } from '@/services/faucet.service';
 import { depositFunds } from '@/services/custodial-wallet.service';
 import { getDepositAddress, withdrawTestBTC } from '@/services/deposit-withdrawal.service';
 import { getTransactionHistory, getTransactionStats } from '@/services/transaction.service';
@@ -158,12 +159,19 @@ export const transferTokens = async (
   }
 };
 
-// Use faucet to get test tokens
-export const useFaucetTokens = async (dispatch: React.Dispatch<WalletAction>) => {
+// Use faucet to get test tokens - Direct ledger minting (PRD Matrix compliant)
+export const useFaucetTokens = async (
+  dispatch: React.Dispatch<WalletAction>,
+  userPrincipal: string
+) => {
   dispatch({ type: 'START_OPERATION' });
 
   try {
-    const result = await useFaucet();
+    // Convert string principal to Principal object
+    const principal = Principal.fromText(userPrincipal);
+
+    // Use direct faucet service (PRD Matrix: DEV + Non-Custodial)
+    const result = await useFaucetDirect(principal);
 
     if (result.success) {
       dispatch({ type: 'OPERATION_SUCCESS' });
@@ -172,7 +180,11 @@ export const useFaucetTokens = async (dispatch: React.Dispatch<WalletAction>) =>
         loadWalletStatus(dispatch),
         loadTransactions(dispatch),
       ]);
-      return { success: true, message: result.message };
+      return {
+        success: true,
+        message: result.message,
+        blockIndex: result.blockIndex
+      };
     } else {
       dispatch({ type: 'OPERATION_ERROR', payload: result.error || 'Faucet failed' });
       return { success: false, error: result.error };

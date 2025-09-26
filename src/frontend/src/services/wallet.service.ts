@@ -26,6 +26,15 @@ export const getWalletStatus = async (): Promise<{ success: boolean; status?: Wa
     }
 
     console.log('[Wallet Service] Getting wallet status...');
+
+    // DEBUG: Log the principal being used for this call
+    try {
+      const principal = await backend.get_principal();
+      console.log('[DEBUG] Backend call principal:', principal);
+    } catch (error) {
+      console.log('[DEBUG] Could not get principal from backend:', error);
+    }
+
     const result = await backend.get_wallet_status();
     if ('Ok' in result) {
       const status = result.Ok;

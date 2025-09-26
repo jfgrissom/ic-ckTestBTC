@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useMemo, useRe
 import { useConnect, useCanister } from '@connect2ic/react';
 import { setBackendActor } from '@/services/backend.service';
 import { setConnectLedgerActor } from '@/services/ledger.service';
+import { setLedgerActor, setMinterActor, setBackendActor as setFaucetBackendActor } from '@/services/faucet.service';
 import { WalletContextValue, WalletState } from './types';
 import { BackendActor } from '@/types/backend.types';
 import { walletReducer, initialWalletState } from './reducer';
@@ -41,6 +42,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const { isConnected, principal } = useConnect();
   const [backendActor] = useCanister('backend');
   const [ckTestBTCLedgerActor] = useCanister('ckTestBTCLedger');
+  const [ckTestBTCMinterActor] = useCanister('ckTestBTCMinter');
 
   // Track previous principal to detect user changes
   const prevPrincipalRef = useRef<string | null>(null);
@@ -86,7 +88,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       // Only when transitioning TO ready state
       if (validateBackendActor(backendActor)) {
         console.log('[WalletProvider] Backend actor validated and connected - transitioning to ready');
+        console.log('[DEBUG] Connect2IC principal:', principal);
+        console.log('[DEBUG] Connect2IC isConnected:', isConnected);
         setBackendActor(backendActor as BackendActor);
+        setFaucetBackendActor(backendActor); // Also set for faucet service
         dispatch({ type: 'BACKEND_READY' });
       } else {
         console.error('[WalletProvider] Invalid backend actor type:', {
@@ -99,6 +104,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       // Only when transitioning FROM ready state
       console.log('[WalletProvider] Backend actor disconnected - transitioning to not ready');
       setBackendActor(null);
+      setFaucetBackendActor(null); // Also clear for faucet service
       dispatch({ type: 'BACKEND_NOT_READY' });
     }
   }, [isConnected, state.backendReady, !!backendActor]);
@@ -110,16 +116,34 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       // Only when transitioning TO connected state
       console.log('[WalletProvider] ckTestBTC ledger actor connected');
       setConnectLedgerActor(ckTestBTCLedgerActor);
+      setLedgerActor(ckTestBTCLedgerActor); // Also set for faucet service
       ledgerActorRef.current = ckTestBTCLedgerActor;
     } else if ((!isConnected || !ckTestBTCLedgerActor) && ledgerActorRef.current) {
       // Only when transitioning FROM connected state
       console.log('[WalletProvider] ckTestBTC ledger actor disconnected');
       setConnectLedgerActor(null);
+      setLedgerActor(null); // Also clear for faucet service
       ledgerActorRef.current = null;
     }
   }, [isConnected, !!ckTestBTCLedgerActor]);
 
-  // 4. One-shot initialization pattern - Event-driven approach with detailed logging
+  // 4. Handle ckTestBTC minter actor lifecycle management - Event-driven approach
+  const minterActorRef = useRef<any>(null);
+  useEffect(() => {
+    if (isConnected && ckTestBTCMinterActor && !minterActorRef.current) {
+      // Only when transitioning TO connected state
+      console.log('[WalletProvider] ckTestBTC minter actor connected');
+      setMinterActor(ckTestBTCMinterActor); // Set for faucet service
+      minterActorRef.current = ckTestBTCMinterActor;
+    } else if ((!isConnected || !ckTestBTCMinterActor) && minterActorRef.current) {
+      // Only when transitioning FROM connected state
+      console.log('[WalletProvider] ckTestBTC minter actor disconnected');
+      setMinterActor(null); // Clear for faucet service
+      minterActorRef.current = null;
+    }
+  }, [isConnected, !!ckTestBTCMinterActor]);
+
+  // 5. One-shot initialization pattern - Event-driven approach with detailed logging
   const shouldInitialize = useMemo(() => {
     const conditions = {
       isAuthenticated: state.isAuthenticated,

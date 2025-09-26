@@ -146,12 +146,33 @@ deploy_with_upgrade() {
 
     echo -e "${BOLD}${GREEN}Using --mode upgrade to preserve all user data${NC}"
 
-    # Deploy with explicit upgrade mode and network specification
+    # SECURITY: Production builds must NOT include development features
+    echo -e "${YELLOW}⚠️  PRODUCTION BUILD: Excluding all development-only features${NC}"
+    echo -e "${YELLOW}⚠️  This means no faucet function will exist in production binary${NC}"
+
+    # Create a backup of dfx.json and temporarily modify build args
+    echo -e "${GREEN}Backing up dfx.json...${NC}"
+    cp dfx.json dfx.json.backup
+
+    # Replace development build args with production (no features)
+    echo -e "${GREEN}Configuring production build (no development features)...${NC}"
+    sed -i.tmp 's/"args": "--features development"/"args": ""/' dfx.json
+
+    # Deploy with production configuration
     LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" \
     IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" \
     dfx deploy --network ic --mode upgrade backend
 
-    if [ $? -ne 0 ]; then
+    # Store deployment result
+    DEPLOY_RESULT=$?
+
+    # Restore original dfx.json
+    echo -e "${GREEN}Restoring original dfx.json...${NC}"
+    mv dfx.json.backup dfx.json
+    rm -f dfx.json.tmp
+
+    # Check deployment result
+    if [ $DEPLOY_RESULT -ne 0 ]; then
         echo -e "${RED}❌ Production deployment failed${NC}"
         echo -e "${YELLOW}💡 Check the error above and the deployment logs${NC}"
         exit 1

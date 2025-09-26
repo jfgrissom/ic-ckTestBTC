@@ -178,59 +178,59 @@ const IC_CKTESTBTC_CANISTER: &str = match option_env!("IC_CKTESTBTC_CANISTER_ID"
     None => "g4xu7-jiaaa-aaaan-aaaaq-cai", // Default mainnet ckTestBTC
 };
 
-const LOCAL_MOCK_LEDGER_CANISTER: &str = match option_env!("LOCAL_MOCK_LEDGER_CANISTER_ID") {
-    Some(id) => id,
-    None => "", // Will be set dynamically by deployment script
-};
-
-const LOCAL_MOCK_MINTER_CANISTER: &str = match option_env!("LOCAL_MOCK_MINTER_CANISTER_ID") {
-    Some(id) => id,
-    None => "", // Will be set dynamically by deployment script
-};
 
 // ICP ledger canister (for ICP support)
 const ICP_LEDGER_CANISTER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
 
-// Helper function to detect if we're running locally
-fn is_local_development() -> bool {
-    // In local development, the management canister has a different ID
-    // This is a simple heuristic to detect local vs production
-    ic_cdk::api::id().to_text().contains("7777")
-}
+// Environment detection moved to compile-time using Cargo features
+// Development builds: cargo build --features development
+// Production builds: cargo build --release (no features)
 
-// Get the appropriate token canister based on environment
+// Get the appropriate token canister based on compile-time environment
 fn get_token_canister() -> Result<Principal, String> {
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
         if LOCAL_MOCK_LEDGER_CANISTER.is_empty() {
             return Err("LOCAL_MOCK_LEDGER_CANISTER_ID environment variable not set".to_string());
         }
         Principal::from_text(LOCAL_MOCK_LEDGER_CANISTER).map_err(|e| format!("Invalid local mock ledger principal: {e}"))
-    } else {
+    }
+
+    #[cfg(not(feature = "development"))]
+    {
         Principal::from_text(IC_CKTESTBTC_CANISTER).map_err(|e| format!("Invalid IC ckTestBTC principal: {e}"))
     }
 }
 
-// Get the minter canister
+// Get the minter canister based on compile-time environment
 fn get_minter_canister() -> Result<Principal, String> {
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
         if LOCAL_MOCK_MINTER_CANISTER.is_empty() {
             return Err("LOCAL_MOCK_MINTER_CANISTER_ID environment variable not set".to_string());
         }
         Principal::from_text(LOCAL_MOCK_MINTER_CANISTER).map_err(|e| format!("Invalid local mock minter principal: {e}"))
-    } else {
+    }
+
+    #[cfg(not(feature = "development"))]
+    {
         // In production, the minter would be a different canister
         // For now, returning error as we don't have the real minter address
         Err("Minter canister not configured for IC deployment".to_string())
     }
 }
 
-// Get ICP ledger canister
+// Get ICP ledger canister based on compile-time environment
 fn get_icp_ledger_canister() -> Result<Principal, String> {
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
         // In local development, we might have a mock ICP ledger
         // For now, we'll return an error
         Err("ICP ledger not available in local development".to_string())
-    } else {
+    }
+
+    #[cfg(not(feature = "development"))]
+    {
         Principal::from_text(ICP_LEDGER_CANISTER).map_err(|e| format!("Invalid ICP ledger principal: {e}"))
     }
 }
@@ -996,31 +996,29 @@ fn get_principal() -> Principal {
     caller()
 }
 
+// SECURITY: Faucet function only exists in development builds
+// Production builds will NOT have this function at all
+#[cfg(feature = "development")]
 #[update]
 async fn faucet() -> TextResult {
-    // Only works in local development
-    if !is_local_development() {
-        return TextResult::Err("Faucet only available in local development".to_string());
-    }
-    
     let caller_principal = caller();
     let account = Account {
         owner: caller_principal,
         subaccount: None,
     };
-    
+
     // Mint 1 ckTestBTC (100,000,000 smallest units) to the caller
     let amount = Nat::from(100_000_000u64);
-    
+
     let token_canister = match get_token_canister() {
         Ok(canister) => canister,
         Err(e) => return TextResult::Err(e),
     };
-    
-    // Call the mint function on local_token
-    let result: CallResult<(Result<Nat, TransferError>,)> = 
+
+    // Call the mint function on mock ledger
+    let result: CallResult<(Result<Nat, TransferError>,)> =
         ic_cdk::call(token_canister, "mint", (account, amount.clone())).await;
-    
+
     match result {
         Ok((Ok(block_index),)) => {
             // Record the mint transaction
@@ -1045,8 +1043,9 @@ async fn faucet() -> TextResult {
 async fn get_btc_address() -> TextResult {
     let caller_principal = caller();
 
-    // For local development, generate a mock TestBTC address
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
+        // Development: Generate a mock TestBTC address
         // Create a deterministic mock address based on the principal
         // Format: tb1q{hash_of_principal}... (testnet bech32 format)
         let principal_bytes = caller_principal.as_slice();
@@ -1061,15 +1060,38 @@ async fn get_btc_address() -> TextResult {
         return TextResult::Ok(mock_address);
     }
 
-    // For IC mainnet, we would call the ckTestBTC canister's get_btc_address function
-    // The actual ckTestBTC uses a derivation path from the principal
-    // This would involve calling something like:
-    // let token_canister = get_token_canister()?;
-    // let result: CallResult<(String,)> = ic_cdk::call(token_canister, "get_btc_address", (account,)).await;
+    #[cfg(not(feature = "development"))]
+    {
+        // Production: Call actual minter for real BTC address derivation
+        let minter_canister = match get_minter_canister() {
+            Ok(canister) => canister,
+            Err(e) => return TextResult::Err(e),
+        };
 
-    // For now, return a placeholder for IC mainnet
-    // In production, this would integrate with the actual ckTestBTC address derivation
-    TextResult::Ok(format!("tb1q_testbtc_address_for_{}", &caller_principal.to_text()[..8]))
+        // Prepare subaccount for the user
+        let user_subaccount = generate_subaccount_for_user(caller_principal);
+
+        // Prepare arguments for minter's get_btc_address
+        #[derive(CandidType, Serialize)]
+        struct GetBtcAddressArgs {
+            owner: Option<Principal>,
+            subaccount: Option<Vec<u8>>,
+        }
+
+        let args = GetBtcAddressArgs {
+            owner: Some(caller_principal),
+            subaccount: Some(user_subaccount),
+        };
+
+        // Call minter's get_btc_address function
+        let result: CallResult<(String,)> =
+            ic_cdk::call(minter_canister, "get_btc_address", (args,)).await;
+
+        match result {
+            Ok((address,)) => TextResult::Ok(address),
+            Err(e) => TextResult::Err(format!("Failed to get deposit address: {:?}", e)),
+        }
+    }
 }
 
 // Get deposit address from minter
@@ -1185,30 +1207,35 @@ async fn withdraw_testbtc(address: String, amount: Nat) -> TextResult {
 
 #[update]
 async fn get_icp_balance() -> Result<Nat, String> {
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
         // Return mock balance for local development
         return Ok(Nat::from(1000000000u64)); // 10 ICP
     }
 
-    let account = Account {
-        owner: caller(),
-        subaccount: None,
-    };
+    #[cfg(not(feature = "development"))]
+    {
+        let account = Account {
+            owner: caller(),
+            subaccount: None,
+        };
 
-    let icp_ledger = get_icp_ledger_canister()?;
+        let icp_ledger = get_icp_ledger_canister()?;
 
-    let result: CallResult<(Nat,)> =
-        ic_cdk::call(icp_ledger, "icrc1_balance_of", (account,)).await;
+        let result: CallResult<(Nat,)> =
+            ic_cdk::call(icp_ledger, "icrc1_balance_of", (account,)).await;
 
-    match result {
-        Ok((balance,)) => Ok(balance),
-        Err(e) => Err(format!("Failed to get ICP balance: {:?}", e)),
+        match result {
+            Ok((balance,)) => Ok(balance),
+            Err(e) => Err(format!("Failed to get ICP balance: {:?}", e)),
+        }
     }
 }
 
 #[update]
 async fn transfer_icp(to_principal: Principal, amount: Nat) -> Result<Nat, String> {
-    if is_local_development() {
+    #[cfg(feature = "development")]
+    {
         // Mock ICP transfer for local development
         store_transaction(
             TransactionType::Send,
@@ -1222,52 +1249,55 @@ async fn transfer_icp(to_principal: Principal, amount: Nat) -> Result<Nat, Strin
         return Ok(Nat::from(1u64));
     }
 
-    let from_principal = caller();
-    let to_account = Account {
-        owner: to_principal,
-        subaccount: None,
-    };
+    #[cfg(not(feature = "development"))]
+    {
+        let from_principal = caller();
+        let to_account = Account {
+            owner: to_principal,
+            subaccount: None,
+        };
 
-    let transfer_args = TransferArgs {
-        from_subaccount: None,
-        to: to_account,
-        amount: amount.clone(),
-        fee: Some(Nat::from(10000u64)), // ICP fee is typically 10000 e8s (0.0001 ICP)
-        memo: None,
-        created_at_time: Some(ic_cdk::api::time()),
-    };
+        let transfer_args = TransferArgs {
+            from_subaccount: None,
+            to: to_account,
+            amount: amount.clone(),
+            fee: Some(Nat::from(10000u64)), // ICP fee is typically 10000 e8s (0.0001 ICP)
+            memo: None,
+            created_at_time: Some(ic_cdk::api::time()),
+        };
 
-    let icp_ledger = get_icp_ledger_canister()?;
+        let icp_ledger = get_icp_ledger_canister()?;
 
-    let result: CallResult<(TransferResult,)> =
-        ic_cdk::call(icp_ledger, "icrc1_transfer", (transfer_args,)).await;
+        let result: CallResult<(TransferResult,)> =
+            ic_cdk::call(icp_ledger, "icrc1_transfer", (transfer_args,)).await;
 
-    match result {
-        Ok((Ok(block_index),)) => {
-            store_transaction(
-                TransactionType::Send,
-                "ICP".to_string(),
-                amount,
-                from_principal.to_text(),
-                to_principal.to_text(),
-                TransactionStatus::Confirmed,
-                Some(block_index.clone()),
-            );
-            Ok(block_index)
-        },
-        Ok((Err(e),)) => {
-            store_transaction(
-                TransactionType::Send,
-                "ICP".to_string(),
-                amount,
-                from_principal.to_text(),
-                to_principal.to_text(),
-                TransactionStatus::Failed,
-                None,
-            );
-            Err(format!("ICP transfer failed: {:?}", e))
-        },
-        Err(e) => Err(format!("Call failed: {:?}", e)),
+        match result {
+            Ok((Ok(block_index),)) => {
+                store_transaction(
+                    TransactionType::Send,
+                    "ICP".to_string(),
+                    amount,
+                    from_principal.to_text(),
+                    to_principal.to_text(),
+                    TransactionStatus::Confirmed,
+                    Some(block_index.clone()),
+                );
+                Ok(block_index)
+            },
+            Ok((Err(e),)) => {
+                store_transaction(
+                    TransactionType::Send,
+                    "ICP".to_string(),
+                    amount,
+                    from_principal.to_text(),
+                    to_principal.to_text(),
+                    TransactionStatus::Failed,
+                    None,
+                );
+                Err(format!("ICP transfer failed: {:?}", e))
+            },
+            Err(e) => Err(format!("Call failed: {:?}", e)),
+        }
     }
 }
 

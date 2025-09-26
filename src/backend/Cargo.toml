@@ -6,6 +6,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+development = []
+
 [dependencies]
 candid = { version = "0.10", features = ["value"] }
 ic-cdk = "0.13"

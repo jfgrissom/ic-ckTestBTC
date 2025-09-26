@@ -42,7 +42,7 @@
   },
   "defaults": {
     "build": {
-      "args": "",
+      "args": "--features development",
       "packtool": ""
     }
   },

@@ -445,24 +445,15 @@ pub fn mint(to: Account, amount: Nat) -> TransferResult {
     let caller = ic_cdk::caller();
 
     // Get the minter canister ID from environment or use the mock minter ID
-    let mock_minter_id = env!("LOCAL_MOCK_MINTER_CANISTER_ID");
-    let minter_principal = if !mock_minter_id.is_empty() {
-        Principal::from_text(mock_minter_id).unwrap_or_else(|_| {
-            // Fallback to the deployed mock minter canister ID
-            Principal::from_text("ulvla-h7777-77774-qaacq-cai").unwrap()
-        })
-    } else {
-        // Default to the mock minter canister ID we deployed
+    let mock_minter_id = option_env!("LOCAL_MOCK_MINTER_CANISTER_ID").unwrap_or("ulvla-h7777-77774-qaacq-cai");
+    let minter_principal = Principal::from_text(mock_minter_id).unwrap_or_else(|_| {
+        // Fallback to the deployed mock minter canister ID
         Principal::from_text("ulvla-h7777-77774-qaacq-cai").unwrap()
-    };
+    });
 
     // Also allow the backend canister to mint for testing
-    let backend_id = env!("CANISTER_ID_BACKEND");
-    let backend_principal = if !backend_id.is_empty() {
-        Principal::from_text(backend_id).ok()
-    } else {
-        Principal::from_text("uxrrr-q7777-77774-qaaaq-cai").ok()
-    };
+    let backend_id = option_env!("CANISTER_ID_BACKEND").unwrap_or("uxrrr-q7777-77774-qaaaq-cai");
+    let backend_principal = Principal::from_text(backend_id).ok();
 
     // Check if caller is authorized to mint
     let is_authorized = caller == minter_principal ||
