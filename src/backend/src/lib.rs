@@ -62,7 +62,7 @@ pub enum TransactionStatus {
 pub struct Transaction {
     pub id: u64,
     pub tx_type: TransactionType,
-    pub token: String, // "ICP" or "ckTestBTC"
+    pub token: String, // "ckTestBTC"
     pub amount: Nat,
     pub from: String,
     pub to: String,
@@ -172,68 +172,74 @@ thread_local! {
     static STABLE_TRANSACTION_COUNTER: RefCell<u64> = RefCell::new(0);
 }
 
-// Get canister IDs from environment variables at compile time, with fallbacks
+// Production canister IDs - only needed for production builds
+#[cfg(not(feature = "development"))]
 const IC_CKTESTBTC_CANISTER: &str = match option_env!("IC_CKTESTBTC_CANISTER_ID") {
     Some(id) => id,
     None => "g4xu7-jiaaa-aaaan-aaaaq-cai", // Default mainnet ckTestBTC
 };
 
-
-// ICP ledger canister (for ICP support)
-const ICP_LEDGER_CANISTER: &str = "ryjl3-tyaaa-aaaaa-aaaba-cai";
+// Production minter canister
+#[cfg(not(feature = "development"))]
+const IC_MINTER_CANISTER: &str = match option_env!("IC_MINTER_CANISTER_ID") {
+    Some(id) => id,
+    None => "mqygn-kiaaa-aaaar-qaadq-cai", // Default IC ckTestBTC minter
+};
 
 // Environment detection moved to compile-time using Cargo features
 // Development builds: cargo build --features development
 // Production builds: cargo build --release (no features)
 
-// Get the appropriate token canister based on compile-time environment
+// Get the appropriate token canister - production by default, development override
 fn get_token_canister() -> Result<Principal, String> {
     #[cfg(feature = "development")]
     {
+        // Development override: use local mock ledger with environment variables
+        const LOCAL_MOCK_LEDGER_CANISTER: &str = match option_env!("LOCAL_MOCK_LEDGER_CANISTER_ID") {
+            Some(id) => id,
+            None => "umunu-kh777-77774-qaaca-cai", // Default local mock ledger
+        };
+
         if LOCAL_MOCK_LEDGER_CANISTER.is_empty() {
             return Err("LOCAL_MOCK_LEDGER_CANISTER_ID environment variable not set".to_string());
         }
-        Principal::from_text(LOCAL_MOCK_LEDGER_CANISTER).map_err(|e| format!("Invalid local mock ledger principal: {e}"))
+        return Principal::from_text(LOCAL_MOCK_LEDGER_CANISTER)
+            .map_err(|e| format!("Invalid local mock ledger principal: {e}"));
     }
 
     #[cfg(not(feature = "development"))]
     {
-        Principal::from_text(IC_CKTESTBTC_CANISTER).map_err(|e| format!("Invalid IC ckTestBTC principal: {e}"))
+        // Production default: use real IC ckTestBTC ledger
+        Principal::from_text(IC_CKTESTBTC_CANISTER)
+            .map_err(|e| format!("Invalid IC ckTestBTC principal: {e}"))
     }
 }
 
-// Get the minter canister based on compile-time environment
+// Get the minter canister - production by default, development override
 fn get_minter_canister() -> Result<Principal, String> {
     #[cfg(feature = "development")]
     {
+        // Development override: use local mock minter with environment variables
+        const LOCAL_MOCK_MINTER_CANISTER: &str = match option_env!("LOCAL_MOCK_MINTER_CANISTER_ID") {
+            Some(id) => id,
+            None => "ulvla-h7777-77774-qaacq-cai", // Default local mock minter
+        };
+
         if LOCAL_MOCK_MINTER_CANISTER.is_empty() {
             return Err("LOCAL_MOCK_MINTER_CANISTER_ID environment variable not set".to_string());
         }
-        Principal::from_text(LOCAL_MOCK_MINTER_CANISTER).map_err(|e| format!("Invalid local mock minter principal: {e}"))
+        return Principal::from_text(LOCAL_MOCK_MINTER_CANISTER)
+            .map_err(|e| format!("Invalid local mock minter principal: {e}"));
     }
 
     #[cfg(not(feature = "development"))]
     {
-        // In production, the minter would be a different canister
-        // For now, returning error as we don't have the real minter address
-        Err("Minter canister not configured for IC deployment".to_string())
+        // Production default: use real IC ckTestBTC minter
+        Principal::from_text(IC_MINTER_CANISTER)
+            .map_err(|e| format!("Invalid IC ckTestBTC minter principal: {e}"))
     }
 }
 
-// Get ICP ledger canister based on compile-time environment
-fn get_icp_ledger_canister() -> Result<Principal, String> {
-    #[cfg(feature = "development")]
-    {
-        // In local development, we might have a mock ICP ledger
-        // For now, we'll return an error
-        Err("ICP ledger not available in local development".to_string())
-    }
-
-    #[cfg(not(feature = "development"))]
-    {
-        Principal::from_text(ICP_LEDGER_CANISTER).map_err(|e| format!("Invalid ICP ledger principal: {e}"))
-    }
-}
 
 // Generate a deterministic subaccount for a user principal
 fn generate_subaccount_for_user(user: Principal) -> Vec<u8> {
@@ -306,7 +312,6 @@ pub enum TransferError {
 }
 
 
-type TransferResult = Result<Nat, TransferError>;
 
 #[update]
 async fn get_balance() -> Result<Nat, String> {
@@ -1203,109 +1208,6 @@ async fn withdraw_testbtc(address: String, amount: Nat) -> TextResult {
     }
 }
 
-// ICP Support Functions
-
-#[update]
-async fn get_icp_balance() -> Result<Nat, String> {
-    #[cfg(feature = "development")]
-    {
-        // Return mock balance for local development
-        return Ok(Nat::from(1000000000u64)); // 10 ICP
-    }
-
-    #[cfg(not(feature = "development"))]
-    {
-        let account = Account {
-            owner: caller(),
-            subaccount: None,
-        };
-
-        let icp_ledger = get_icp_ledger_canister()?;
-
-        let result: CallResult<(Nat,)> =
-            ic_cdk::call(icp_ledger, "icrc1_balance_of", (account,)).await;
-
-        match result {
-            Ok((balance,)) => Ok(balance),
-            Err(e) => Err(format!("Failed to get ICP balance: {:?}", e)),
-        }
-    }
-}
-
-#[update]
-async fn transfer_icp(to_principal: Principal, amount: Nat) -> Result<Nat, String> {
-    #[cfg(feature = "development")]
-    {
-        // Mock ICP transfer for local development
-        store_transaction(
-            TransactionType::Send,
-            "ICP".to_string(),
-            amount.clone(),
-            caller().to_text(),
-            to_principal.to_text(),
-            TransactionStatus::Confirmed,
-            Some(Nat::from(1u64)),
-        );
-        return Ok(Nat::from(1u64));
-    }
-
-    #[cfg(not(feature = "development"))]
-    {
-        let from_principal = caller();
-        let to_account = Account {
-            owner: to_principal,
-            subaccount: None,
-        };
-
-        let transfer_args = TransferArgs {
-            from_subaccount: None,
-            to: to_account,
-            amount: amount.clone(),
-            fee: Some(Nat::from(10000u64)), // ICP fee is typically 10000 e8s (0.0001 ICP)
-            memo: None,
-            created_at_time: Some(ic_cdk::api::time()),
-        };
-
-        let icp_ledger = get_icp_ledger_canister()?;
-
-        let result: CallResult<(TransferResult,)> =
-            ic_cdk::call(icp_ledger, "icrc1_transfer", (transfer_args,)).await;
-
-        match result {
-            Ok((Ok(block_index),)) => {
-                store_transaction(
-                    TransactionType::Send,
-                    "ICP".to_string(),
-                    amount,
-                    from_principal.to_text(),
-                    to_principal.to_text(),
-                    TransactionStatus::Confirmed,
-                    Some(block_index.clone()),
-                );
-                Ok(block_index)
-            },
-            Ok((Err(e),)) => {
-                store_transaction(
-                    TransactionType::Send,
-                    "ICP".to_string(),
-                    amount,
-                    from_principal.to_text(),
-                    to_principal.to_text(),
-                    TransactionStatus::Failed,
-                    None,
-                );
-                Err(format!("ICP transfer failed: {:?}", e))
-            },
-            Err(e) => Err(format!("Call failed: {:?}", e)),
-        }
-    }
-}
-
-#[query]
-fn get_icp_address() -> String {
-    // ICP address is just the principal
-    caller().to_text()
-}
 
 // Transaction History Functions
 

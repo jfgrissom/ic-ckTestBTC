@@ -57,8 +57,8 @@ echo -e "${YELLOW}Building with environment variables:${NC}"
 echo -e "${YELLOW}  LOCAL_MOCK_LEDGER_CANISTER_ID=${LOCAL_MOCK_LEDGER_CANISTER_ID}${NC}"
 echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
 
-# Build the backend without deploying
-echo -e "${GREEN}Building backend canister WASM...${NC}"
+# Build the backend without deploying with development features enabled
+echo -e "${GREEN}Building backend canister WASM with development features...${NC}"
 LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" dfx build backend
 
 # Check if build was successful

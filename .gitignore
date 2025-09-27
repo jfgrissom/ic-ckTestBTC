@@ -40,3 +40,7 @@ Cargo.lock
 
 # Generated files
 src/declarations/
+
+# Temporary Candid files
+*.did
+!src/**/*.did

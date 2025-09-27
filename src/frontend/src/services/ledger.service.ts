@@ -1,4 +1,9 @@
 import { Principal } from '@dfinity/principal';
+import { createAuthenticatedActor, updateActorIdentity } from '@/services/actor.service';
+import { getIdentity } from '@/services/auth.service';
+import { idlFactory } from 'declarations/mock_cktestbtc_ledger';
+import { canisterId } from 'declarations/mock_cktestbtc_ledger';
+import { Identity } from '@dfinity/agent';
 
 // ICRC-1 Token Standard types
 interface Account {
@@ -38,36 +43,90 @@ interface TransferError {
   GenericError?: { error_code: bigint; message: string };
 }
 
-// Global state for Connect2IC ledger actor
-let connectLedgerActor: LedgerActor | null = null;
+// Module-level state for ledger actor (functional paradigm)
+let ledgerActor: LedgerActor | null = null;
 
 /**
- * Set the Connect2IC ledger actor (called by App.tsx when actor is available)
+ * Initialize or update ledger actor with current identity
+ * Creates a new authenticated actor for ledger communication
+ */
+export const initializeLedgerActor = async (): Promise<void> => {
+  const identity = getIdentity();
+  if (!identity) {
+    console.log('[LedgerService] No identity available for ledger actor');
+    ledgerActor = null;
+    return;
+  }
+
+  try {
+    ledgerActor = await createAuthenticatedActor<LedgerActor>(
+      canisterId,
+      idlFactory,
+      identity
+    );
+    console.log('[LedgerService] Ledger actor initialized with principal:',
+      identity.getPrincipal().toString());
+  } catch (error) {
+    console.error('[LedgerService] Failed to initialize ledger actor:', error);
+    ledgerActor = null;
+  }
+};
+
+/**
+ * Update ledger actor with new identity
+ * Called when user authentication changes
+ */
+export const updateLedgerActor = async (identity: Identity | null): Promise<void> => {
+  if (!identity) {
+    console.log('[LedgerService] Clearing ledger actor (no identity)');
+    ledgerActor = null;
+    return;
+  }
+
+  try {
+    ledgerActor = await updateActorIdentity<LedgerActor>(
+      canisterId,
+      idlFactory,
+      identity
+    );
+    console.log('[LedgerService] Ledger actor updated with principal:',
+      identity.getPrincipal().toString());
+  } catch (error) {
+    console.error('[LedgerService] Failed to update ledger actor:', error);
+    ledgerActor = null;
+  }
+};
+
+/**
+ * Set the Connect2IC ledger actor (for compatibility)
+ * @deprecated Use initializeLedgerActor() or updateLedgerActor() instead
  */
 export const setConnectLedgerActor = (actor: unknown): void => {
+  console.warn('[LedgerService] setConnectLedgerActor is deprecated. Use initializeLedgerActor() instead.');
   // Handle null case when clearing the actor
   if (actor === null) {
-    console.log('[Ledger Service] Clearing Connect2IC ledger actor');
-    connectLedgerActor = null;
+    console.log('[Ledger Service] Clearing ledger actor');
+    ledgerActor = null;
     return;
   }
 
   // Type guard to ensure actor has required ICRC-1 methods
   if (isValidLedgerActor(actor)) {
-    console.log('[Ledger Service] Setting Connect2IC ledger actor');
-    connectLedgerActor = actor;
+    console.log('[Ledger Service] Setting ledger actor');
+    ledgerActor = actor;
   } else {
     console.error('[Ledger Service] Invalid ledger actor: missing required ICRC-1 methods');
-    connectLedgerActor = null;
+    ledgerActor = null;
     throw new Error('Invalid ledger actor: missing required ICRC-1 methods');
   }
 };
 
 /**
- * Get current Connect2IC ledger actor
+ * Get current ledger actor
+ * @deprecated Use getLedgerActor() instead
  */
 export const getConnectLedgerActor = (): LedgerActor | null => {
-  return connectLedgerActor;
+  return ledgerActor;
 };
 
 /**
@@ -85,24 +144,36 @@ const isValidLedgerActor = (actor: unknown): actor is LedgerActor => {
 };
 
 /**
- * Clear Connect2IC ledger actor
+ * Clear ledger actor
  */
 export const clearConnectLedgerActor = (): void => {
-  connectLedgerActor = null;
+  ledgerActor = null;
 };
 
 
 
 /**
- * Get ledger actor - uses Connect2IC actor only
+ * Get ledger actor - attempts to initialize if not available
  */
-const getLedgerActor = (): LedgerActor => {
-  if (!connectLedgerActor) {
-    throw new Error('Connect2IC ledger actor not initialized. Please reconnect your wallet.');
+const getLedgerActor = async (): Promise<LedgerActor> => {
+  if (!ledgerActor) {
+    // Try to initialize if we have an identity
+    await initializeLedgerActor();
+
+    if (!ledgerActor) {
+      throw new Error('Ledger actor not initialized. Please reconnect your wallet.');
+    }
   }
 
-  console.log('[Ledger Service] Using Connect2IC actor');
-  return connectLedgerActor;
+  console.log('[Ledger Service] Using authenticated ledger actor');
+  return ledgerActor;
+};
+
+/**
+ * Get ledger actor synchronously - returns null if not initialized
+ */
+const getLedgerActorSync = (): LedgerActor | null => {
+  return ledgerActor;
 };
 
 /**
@@ -110,7 +181,7 @@ const getLedgerActor = (): LedgerActor => {
  */
 export const getLedgerBalance = async (owner: Principal): Promise<{ success: boolean; balance?: string; error?: string }> => {
   try {
-    const actor = getLedgerActor();
+    const actor = await getLedgerActor();
     const account: Account = {
       owner,
       subaccount: [], // Use empty array for None in Candid optional
@@ -139,7 +210,7 @@ export const transferViaLedger = async (
   amount: string // Amount in ckTestBTC
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
   try {
-    const actor = getLedgerActor();
+    const actor = await getLedgerActor();
 
     // Convert ckTestBTC to satoshis
     const amountBigInt = BigInt(Math.floor(Number(amount) * 100000000));
@@ -188,7 +259,7 @@ export const transferViaLedger = async (
  */
 export const getLedgerFee = async (): Promise<{ success: boolean; fee?: string; error?: string }> => {
   try {
-    const actor = getLedgerActor();
+    const actor = await getLedgerActor();
     const fee = await actor.icrc1_fee();
     const feeString = fee.toString();
 

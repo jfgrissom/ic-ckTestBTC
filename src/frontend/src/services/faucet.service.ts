@@ -1,5 +1,11 @@
 import { getNetworkConfig } from '@/types/backend.types';
 import { Principal } from '@dfinity/principal';
+import { createAuthenticatedActor, updateActorIdentity } from '@/services/actor.service';
+import { getIdentity } from '@/services/auth.service';
+import { Identity } from '@dfinity/agent';
+import { idlFactory as backendIdlFactory, canisterId as backendCanisterId } from 'declarations/backend';
+import { idlFactory as ledgerIdlFactory, canisterId as ledgerCanisterId } from 'declarations/mock_cktestbtc_ledger';
+import { idlFactory as minterIdlFactory, canisterId as minterCanisterId } from 'declarations/mock_cktestbtc_minter';
 
 /**
  * Faucet Service - Backend Proxy for Authorized Minting
@@ -7,50 +13,144 @@ import { Principal } from '@dfinity/principal';
  * Uses backend as authorized minter proxy to call ledger.mint()
  */
 
-// Global state for backend actor (for minting) and ledger actor (for balance queries)
+// Module-level state for actors (functional paradigm)
 let backendActor: any = null;
 let ledgerActor: any = null;
 let minterActor: any = null;
 
 /**
- * Set the backend actor (called by wallet context when actor is available)
+ * Initialize or update faucet actors with current identity
+ */
+export const initializeFaucetActors = async (): Promise<void> => {
+  const identity = getIdentity();
+  if (!identity) {
+    console.log('[FaucetService] No identity available for faucet actors');
+    backendActor = null;
+    ledgerActor = null;
+    minterActor = null;
+    return;
+  }
+
+  try {
+    backendActor = await createAuthenticatedActor(
+      backendCanisterId,
+      backendIdlFactory,
+      identity
+    );
+    ledgerActor = await createAuthenticatedActor(
+      ledgerCanisterId,
+      ledgerIdlFactory,
+      identity
+    );
+    minterActor = await createAuthenticatedActor(
+      minterCanisterId,
+      minterIdlFactory,
+      identity
+    );
+    console.log('[FaucetService] Faucet actors initialized');
+  } catch (error) {
+    console.error('[FaucetService] Failed to initialize faucet actors:', error);
+  }
+};
+
+/**
+ * Update faucet actors with new identity
+ */
+export const updateFaucetActors = async (identity: Identity | null): Promise<void> => {
+  if (!identity) {
+    console.log('[FaucetService] Clearing faucet actors (no identity)');
+    backendActor = null;
+    ledgerActor = null;
+    minterActor = null;
+    return;
+  }
+
+  try {
+    backendActor = await updateActorIdentity(
+      backendCanisterId,
+      backendIdlFactory,
+      identity
+    );
+    ledgerActor = await updateActorIdentity(
+      ledgerCanisterId,
+      ledgerIdlFactory,
+      identity
+    );
+    minterActor = await updateActorIdentity(
+      minterCanisterId,
+      minterIdlFactory,
+      identity
+    );
+    console.log('[FaucetService] Faucet actors updated');
+  } catch (error) {
+    console.error('[FaucetService] Failed to update faucet actors:', error);
+  }
+};
+
+/**
+ * Set the backend actor (for compatibility)
+ * @deprecated Use initializeFaucetActors() or updateFaucetActors() instead
  */
 export const setBackendActor = (actor: any): void => {
+  console.warn('[FaucetService] setBackendActor is deprecated. Use initializeFaucetActors() instead.');
   backendActor = actor;
 };
 
 /**
- * Set the ledger actor (called by wallet context when actor is available)
+ * Set the ledger actor (for compatibility)
+ * @deprecated Use initializeFaucetActors() or updateFaucetActors() instead
  */
 export const setLedgerActor = (actor: any): void => {
+  console.warn('[FaucetService] setLedgerActor is deprecated. Use initializeFaucetActors() instead.');
   ledgerActor = actor;
 };
 
 /**
- * Set the minter actor (called by wallet context when actor is available)
+ * Set the minter actor (for compatibility)
+ * @deprecated Use initializeFaucetActors() or updateFaucetActors() instead
  */
 export const setMinterActor = (actor: any): void => {
+  console.warn('[FaucetService] setMinterActor is deprecated. Use initializeFaucetActors() instead.');
   minterActor = actor;
 };
 
 /**
  * Get current backend actor
+ * Attempts to initialize if not available
  */
-export const getBackendActor = (): any => {
+export const getBackendActor = async (): Promise<any> => {
+  if (!backendActor) {
+    await initializeFaucetActors();
+  }
+  return backendActor;
+};
+
+/**
+ * Get current backend actor synchronously
+ */
+export const getBackendActorSync = (): any => {
   return backendActor;
 };
 
 /**
  * Get current ledger actor
+ * Attempts to initialize if not available
  */
-export const getLedgerActor = (): any => {
+export const getLedgerActor = async (): Promise<any> => {
+  if (!ledgerActor) {
+    await initializeFaucetActors();
+  }
   return ledgerActor;
 };
 
 /**
  * Get current minter actor
+ * Attempts to initialize if not available
  */
-export const getMinterActor = (): any => {
+export const getMinterActor = async (): Promise<any> => {
+  if (!minterActor) {
+    await initializeFaucetActors();
+  }
   return minterActor;
 };
 
@@ -94,7 +194,11 @@ export const useFaucetDirect = async (
 
   // Ensure backend actor is available (backend is authorized to mint)
   if (!backendActor) {
-    return { success: false, error: 'Backend actor not initialized' };
+    // Try to initialize
+    await initializeFaucetActors();
+    if (!backendActor) {
+      return { success: false, error: 'Backend actor not initialized' };
+    }
   }
 
   try {
@@ -138,5 +242,7 @@ export const useFaucetDirect = async (
  */
 export const isFaucetAvailable = (): boolean => {
   const config = getNetworkConfig();
-  return config.network === 'local' && !!backendActor;
+  // Check if backend actor is already initialized
+  const actor = getBackendActorSync();
+  return config.network === 'local' && !!actor;
 };

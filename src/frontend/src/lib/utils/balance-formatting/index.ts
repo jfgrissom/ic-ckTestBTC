@@ -38,7 +38,7 @@ export const formatAmount = (amount: string): string => {
 /**
  * Format token balance with token-specific logic
  * @param balance - Already formatted balance string from service layer
- * @param token - Token type ('ICP' | 'ckTestBTC')
+ * @param token - Token type ('ckTestBTC')
  * @param loading - Whether the balance is currently loading
  * @returns Formatted balance string with appropriate decimal places
  */

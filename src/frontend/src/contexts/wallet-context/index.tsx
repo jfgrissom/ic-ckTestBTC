@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useRef } from 'react';
-import { useConnect, useCanister } from '@connect2ic/react';
-import { setBackendActor } from '@/services/backend.service';
-import { setConnectLedgerActor } from '@/services/ledger.service';
-import { setLedgerActor, setMinterActor, setBackendActor as setFaucetBackendActor } from '@/services/faucet.service';
-import { WalletContextValue, WalletState } from './types';
-import { BackendActor } from '@/types/backend.types';
+import { useAuth } from '@/contexts/auth-context';
+import { initializeBackendActor } from '@/services/backend.service';
+import { initializeLedgerActor } from '@/services/ledger.service';
+import { initializeFaucetActors } from '@/services/faucet.service';
+import { WalletContextValue } from './types';
 import { walletReducer, initialWalletState } from './reducer';
 import { loadInitialWalletData } from './actions';
 
@@ -25,31 +24,20 @@ interface WalletProviderProps {
   children: React.ReactNode;
 }
 
-// Type validation function for Connect2IC actors
-const validateBackendActor = (actor: unknown): actor is BackendActor => {
-  return !!(actor &&
-         typeof actor === 'object' &&
-         actor !== null &&
-         'get_wallet_status' in actor &&
-         typeof (actor as Record<string, unknown>).get_wallet_status === 'function');
-};
-
 // Main WalletProvider component
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(walletReducer, initialWalletState);
 
-  // Connect2IC hooks
-  const { isConnected, principal } = useConnect();
-  const [backendActor] = useCanister('backend');
-  const [ckTestBTCLedgerActor] = useCanister('ckTestBTCLedger');
-  const [ckTestBTCMinterActor] = useCanister('ckTestBTCMinter');
+  // Use new auth context
+  const { isAuthenticated, principal, identity } = useAuth();
 
   // Track previous principal to detect user changes
   const prevPrincipalRef = useRef<string | null>(null);
+  const actorsInitializedRef = useRef(false);
 
   // 1. Handle authentication state changes
   useEffect(() => {
-    const currentPrincipal = principal || null;
+    const currentPrincipal = principal?.toString() || null;
     const prevPrincipal = prevPrincipalRef.current;
 
     // Check if user changed (different principal)
@@ -60,152 +48,60 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     dispatch({
       type: 'AUTH_CHANGED',
       payload: {
-        isAuthenticated: isConnected,
+        isAuthenticated,
         principal: currentPrincipal,
       },
     });
 
-    // CRITICAL: Clear backend actor when user logs out or changes
-    // This prevents using cached actors from previous authentication sessions
-    if (!isConnected) {
-      console.log('[WalletProvider] User logged out - clearing backend actor');
-      setBackendActor(null);
-    } else if (userChanged) {
-      console.log('[WalletProvider] User changed - clearing backend actor', {
-        from: prevPrincipal,
-        to: currentPrincipal
+    // Initialize actors when authenticated
+    if (isAuthenticated && identity && !actorsInitializedRef.current) {
+      console.log('[WalletProvider] User authenticated - initializing actors');
+      Promise.all([
+        initializeBackendActor(),
+        initializeLedgerActor(),
+        initializeFaucetActors()
+      ]).then(() => {
+        actorsInitializedRef.current = true;
+        dispatch({ type: 'BACKEND_READY' });
+      }).catch((error) => {
+        console.error('[WalletProvider] Failed to initialize actors:', error);
+        dispatch({ type: 'BACKEND_NOT_READY' });
       });
-      setBackendActor(null);
+    } else if (!isAuthenticated && actorsInitializedRef.current) {
+      console.log('[WalletProvider] User logged out - clearing state');
+      actorsInitializedRef.current = false;
+      dispatch({ type: 'BACKEND_NOT_READY' });
+    } else if (userChanged) {
+      console.log('[WalletProvider] User changed - reinitializing actors');
+      Promise.all([
+        initializeBackendActor(),
+        initializeLedgerActor(),
+        initializeFaucetActors()
+      ]).then(() => {
+        dispatch({ type: 'BACKEND_READY' });
+      }).catch((error) => {
+        console.error('[WalletProvider] Failed to reinitialize actors:', error);
+        dispatch({ type: 'BACKEND_NOT_READY' });
+      });
     }
 
     // Update previous principal reference
     prevPrincipalRef.current = currentPrincipal;
-  }, [isConnected, principal]);
+  }, [isAuthenticated, principal, identity]);
 
-  // 2. Handle backend actor lifecycle management - Event-driven approach with validation
+  // 2. Load initial wallet data when backend is ready
   useEffect(() => {
-    if (isConnected && backendActor && !state.backendReady) {
-      // Only when transitioning TO ready state
-      if (validateBackendActor(backendActor)) {
-        console.log('[WalletProvider] Backend actor validated and connected - transitioning to ready');
-        console.log('[DEBUG] Connect2IC principal:', principal);
-        console.log('[DEBUG] Connect2IC isConnected:', isConnected);
-        setBackendActor(backendActor as BackendActor);
-        setFaucetBackendActor(backendActor); // Also set for faucet service
-        dispatch({ type: 'BACKEND_READY' });
-      } else {
-        console.error('[WalletProvider] Invalid backend actor type:', {
-          type: typeof backendActor,
-          hasGetWalletStatus: backendActor && typeof backendActor === 'object' && 'get_wallet_status' in backendActor,
-          actor: backendActor
-        });
-      }
-    } else if ((!isConnected || !backendActor) && state.backendReady) {
-      // Only when transitioning FROM ready state
-      console.log('[WalletProvider] Backend actor disconnected - transitioning to not ready');
-      setBackendActor(null);
-      setFaucetBackendActor(null); // Also clear for faucet service
-      dispatch({ type: 'BACKEND_NOT_READY' });
-    }
-  }, [isConnected, state.backendReady, !!backendActor]);
-
-  // 3. Handle ckTestBTC ledger actor lifecycle management - Event-driven approach
-  const ledgerActorRef = useRef<any>(null);
-  useEffect(() => {
-    if (isConnected && ckTestBTCLedgerActor && !ledgerActorRef.current) {
-      // Only when transitioning TO connected state
-      console.log('[WalletProvider] ckTestBTC ledger actor connected');
-      setConnectLedgerActor(ckTestBTCLedgerActor);
-      setLedgerActor(ckTestBTCLedgerActor); // Also set for faucet service
-      ledgerActorRef.current = ckTestBTCLedgerActor;
-    } else if ((!isConnected || !ckTestBTCLedgerActor) && ledgerActorRef.current) {
-      // Only when transitioning FROM connected state
-      console.log('[WalletProvider] ckTestBTC ledger actor disconnected');
-      setConnectLedgerActor(null);
-      setLedgerActor(null); // Also clear for faucet service
-      ledgerActorRef.current = null;
-    }
-  }, [isConnected, !!ckTestBTCLedgerActor]);
-
-  // 4. Handle ckTestBTC minter actor lifecycle management - Event-driven approach
-  const minterActorRef = useRef<any>(null);
-  useEffect(() => {
-    if (isConnected && ckTestBTCMinterActor && !minterActorRef.current) {
-      // Only when transitioning TO connected state
-      console.log('[WalletProvider] ckTestBTC minter actor connected');
-      setMinterActor(ckTestBTCMinterActor); // Set for faucet service
-      minterActorRef.current = ckTestBTCMinterActor;
-    } else if ((!isConnected || !ckTestBTCMinterActor) && minterActorRef.current) {
-      // Only when transitioning FROM connected state
-      console.log('[WalletProvider] ckTestBTC minter actor disconnected');
-      setMinterActor(null); // Clear for faucet service
-      minterActorRef.current = null;
-    }
-  }, [isConnected, !!ckTestBTCMinterActor]);
-
-  // 5. One-shot initialization pattern - Event-driven approach with detailed logging
-  const shouldInitialize = useMemo(() => {
-    const conditions = {
-      isAuthenticated: state.isAuthenticated,
-      backendReady: state.backendReady,
-      notInitialized: !state.initialized,
-      notLoading: !state.loading.initial,
-      loadingInitialValue: state.loading.initial
-    };
-
-    const result = state.isAuthenticated &&
-                  state.backendReady &&
-                  !state.initialized &&
-                  !state.loading.initial;
-
-    console.log('[WalletProvider] shouldInitialize calculation:', {
-      ...conditions,
-      shouldInitialize: result
-    });
-
-    return result;
-  }, [state.isAuthenticated, state.backendReady, state.initialized, state.loading.initial]);
-
-  useEffect(() => {
-    console.log('[WalletProvider] shouldInitialize effect triggered:', shouldInitialize);
-    if (shouldInitialize) {
-      console.log('[WalletProvider] Initializing wallet data - conditions met:', {
-        isAuthenticated: state.isAuthenticated,
-        backendReady: state.backendReady,
-        initialized: state.initialized,
-        alreadyLoading: state.loading.initial
-      });
+    if (state.backendReady && isAuthenticated && principal) {
+      console.log('[WalletProvider] Loading initial wallet data');
       loadInitialWalletData(dispatch);
     }
-  }, [shouldInitialize]);
+  }, [state.backendReady, isAuthenticated, principal]);
 
-  // Memoize context value to prevent unnecessary re-renders
-  const contextValue = useMemo(
-    () => ({
-      state,
-      dispatch,
-    }),
-    [state]
-  );
-
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('[WalletProvider] State update:', {
-      isAuthenticated: state.isAuthenticated,
-      backendReady: state.backendReady,
-      initialized: state.initialized,
-      loading: state.loading,
-      hasWalletStatus: !!state.walletStatus,
-      transactionCount: state.transactions.length,
-      // Detailed loading breakdown for debugging
-      loadingDetails: {
-        initial: state.loading.initial,
-        wallet: state.loading.wallet,
-        transactions: state.loading.transactions,
-        operations: state.loading.operations
-      }
-    });
-  }, [state]);
+  // 3. Create the context value with memoization for performance
+  const contextValue = useMemo<WalletContextValue>(() => ({
+    state,
+    dispatch,
+  }), [state]);
 
   return (
     <WalletContext.Provider value={contextValue}>
@@ -214,13 +110,5 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   );
 };
 
-// Export context for advanced usage
+// Export the context for direct use if needed
 export { WalletContext };
-
-// Export types
-export type { WalletState, WalletContextValue };
-
-// Re-export all other types and utilities
-export * from './types';
-export * from './actions';
-export * from './reducer';

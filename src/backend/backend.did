@@ -48,13 +48,12 @@ type WalletStatus = record {
 service : {
   deposit_funds : (nat) -> (Result);
   deposit_to_custody : (nat) -> (Result_1);
+  faucet : () -> (TextResult);
   get_backend_total_balance : () -> (Result) query;
   get_balance : () -> (Result);
   get_btc_address : () -> (TextResult);
   get_custodial_transaction_history : () -> (vec CustodialTransaction) query;
   get_deposit_address : () -> (TextResult);
-  get_icp_address : () -> (text) query;
-  get_icp_balance : () -> (Result);
   get_principal : () -> (principal) query;
   get_reserve_status : () -> (ReserveStatus) query;
   get_transaction : (nat64) -> (opt Transaction) query;
@@ -64,7 +63,6 @@ service : {
   get_wallet_status : () -> (Result_2);
   notify_deposit : (nat, nat) -> (Result_1);
   transfer : (principal, nat) -> (Result);
-  transfer_icp : (principal, nat) -> (Result);
   virtual_transfer : (principal, nat) -> (Result_3);
   withdraw_funds : (nat) -> (Result);
   withdraw_testbtc : (text, nat) -> (TextResult);

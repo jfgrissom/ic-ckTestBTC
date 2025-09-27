@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Connect2ICProvider } from '@connect2ic/react';
-import '@connect2ic/core/style.css';
-import { createConnect2ICClient } from '@/config/connect2ic';
+import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { WalletProvider } from '@/contexts/wallet-context';
+import { ModalProvider } from '@/contexts/modal-context';
 import { initializeServices } from '@/services/initialization';
 import LoadingScreen from '@/components/shared/loading-screen';
-
-import { WalletProvider } from '@/contexts/wallet-context';
-import { useAuthentication } from '@/contexts/wallet-context/hooks';
 
 // Components
 import LoginScreen from '@/components/auth/login-screen';
@@ -19,7 +16,6 @@ import SendReceiveTab from '@/components/tabs/send-receive-tab';
 import TransactionsTab from '@/components/tabs/transactions-tab';
 
 // Modal Components
-import { ModalProvider } from '@/contexts/modal-context';
 import ModalRenderer from '@/components/shared/modal-renderer';
 
 // UI Components
@@ -27,58 +23,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 
 /**
- * Connect2IC Wrapper - Creates client and provides Connect2IC context
- * Only rendered after services are successfully initialized
+ * AppContent component - Contains the main application logic
+ * Rendered inside AuthProvider after authentication setup
  */
-const Connect2ICWrapper: React.FC = () => {
-  // Import backend canister declarations (after initialization)
-  const [client, setClient] = useState<any>(null);
+const AppContent: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    const setupConnect2IC = async () => {
-      try {
-        console.log('[App] Setting up Connect2IC client...');
-        const connect2icClient = await createConnect2ICClient();
-        setClient(connect2icClient);
-        console.log('[App] Connect2IC client setup complete');
-      } catch (error) {
-        console.error('[App] Failed to setup Connect2IC:', error);
-      }
-    };
-
-    setupConnect2IC();
-  }, []);
-
-  if (!client) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 font-sans flex items-center justify-center">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-6 max-w-md shadow-xl">
           <h2 className="text-lg font-semibold text-white mb-2">
-            Setting up Connect2IC...
+            Initializing...
           </h2>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
         </div>
       </div>
     );
   }
-
-  return (
-    <Connect2ICProvider client={client}>
-      <WalletProvider>
-        <ModalProvider>
-          <AppContent />
-        </ModalProvider>
-      </WalletProvider>
-    </Connect2ICProvider>
-  );
-};
-
-/**
- * AppContent component - Contains the main application logic
- * Rendered inside Connect2IC provider after client setup
- */
-const AppContent: React.FC = () => {
-  const { isAuthenticated } = useAuthentication();
 
   if (!isAuthenticated) {
     return (
@@ -131,7 +93,7 @@ const AppContent: React.FC = () => {
 
 /**
  * Main App component with service initialization and loading state
- * Based on the crypto platform initialization pattern
+ * Using @dfinity/auth-client for authentication
  */
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -167,7 +129,15 @@ const App: React.FC = () => {
     );
   }
 
-  return <Connect2ICWrapper />;
+  return (
+    <AuthProvider>
+      <WalletProvider>
+        <ModalProvider>
+          <AppContent />
+        </ModalProvider>
+      </WalletProvider>
+    </AuthProvider>
+  );
 };
 
 export default App;

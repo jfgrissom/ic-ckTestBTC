@@ -57,6 +57,7 @@ if command -v jq &> /dev/null; then
             echo -e "${GREEN}✅ Environment variables loaded from dfx.json persistent storage${NC}"
             echo -e "${YELLOW}  LOCAL_MOCK_LEDGER_CANISTER_ID=${LOCAL_MOCK_LEDGER_CANISTER_ID}${NC}"
             echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
+            echo -e "${YELLOW}  LOCAL_MOCK_MINTER_CANISTER_ID=${LOCAL_MOCK_MINTER_CANISTER_ID:-ulvla-h7777-77774-qaacq-cai}${NC}"
         else
             echo -e "${YELLOW}⚠️  dfx.json env section is empty, running update-env.sh to populate it...${NC}"
             ./scripts/update-env.sh
@@ -82,6 +83,9 @@ else
     fi
 fi
 
+# Set default for LOCAL_MOCK_MINTER_CANISTER_ID if not set
+export LOCAL_MOCK_MINTER_CANISTER_ID="${LOCAL_MOCK_MINTER_CANISTER_ID:-ulvla-h7777-77774-qaacq-cai}"
+
 # Verify required environment variables are set
 if [ -z "$LOCAL_MOCK_LEDGER_CANISTER_ID" ]; then
     echo -e "${RED}❌ LOCAL_MOCK_LEDGER_CANISTER_ID is not set${NC}"
@@ -97,22 +101,59 @@ if [ -z "$LOCAL_MOCK_LEDGER_CANISTER_ID" ]; then
     fi
 fi
 
-# Build backend with environment variables set
-echo -e "${GREEN}Building backend canister...${NC}"
-./scripts/build-backend.sh
+# Build backend with development features using cargo directly
+echo -e "${GREEN}Building backend canister with development features...${NC}"
+echo -e "${YELLOW}Building with environment variables:${NC}"
+echo -e "${YELLOW}  LOCAL_MOCK_LEDGER_CANISTER_ID=${LOCAL_MOCK_LEDGER_CANISTER_ID}${NC}"
+echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
+echo -e "${YELLOW}  LOCAL_MOCK_MINTER_CANISTER_ID=${LOCAL_MOCK_MINTER_CANISTER_ID:-ulvla-h7777-77774-qaacq-cai}${NC}"
+
+# CRITICAL: Clean existing builds to ensure development features
+echo -e "${RED}🧹 Cleaning existing build artifacts...${NC}"
+echo -e "${YELLOW}This ensures development features are properly built${NC}"
+cargo clean -p backend
+rm -f target/wasm32-unknown-unknown/release/backend.wasm
+
+# Build with development features directly using cargo
+cd src/backend
+LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" \
+IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" \
+LOCAL_MOCK_MINTER_CANISTER_ID="${LOCAL_MOCK_MINTER_CANISTER_ID:-ulvla-h7777-77774-qaacq-cai}" \
+cargo build --target wasm32-unknown-unknown --release --features development
 
 # Check if build was successful
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Backend build failed, aborting deployment${NC}"
+    cd ../..
+    exit 1
+fi
+cd ../..
+
+# Verify WASM was built with development features
+echo -e "${YELLOW}Verifying development features in WASM...${NC}"
+if candid-extractor target/wasm32-unknown-unknown/release/backend.wasm 2>/dev/null | grep -q "faucet"; then
+    echo -e "${GREEN}✅ Development features confirmed (faucet function found)${NC}"
+else
+    echo -e "${RED}❌ Development features not found in WASM${NC}"
     exit 1
 fi
 
-# Deploy the backend
-echo -e "${GREEN}Deploying backend canister...${NC}"
-LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" dfx deploy backend
+# Deploy the backend with development features enabled
+echo -e "${GREEN}Deploying backend canister with development features...${NC}"
+
+# Force clean rebuild by uninstalling existing code (prevents caching issues)
+echo -e "${YELLOW}Uninstalling existing backend code to force clean rebuild...${NC}"
+dfx canister uninstall-code backend 2>/dev/null || true
+
+# Deploy with pre-built WASM using canister install
+echo -e "${YELLOW}Installing pre-built WASM with development features...${NC}"
+dfx canister install backend --mode reinstall --wasm target/wasm32-unknown-unknown/release/backend.wasm --yes
+
+# Store deployment result
+DEPLOY_RESULT=$?
 
 # Check if deployment was successful
-if [ $? -ne 0 ]; then
+if [ $DEPLOY_RESULT -ne 0 ]; then
     echo -e "${RED}❌ Backend deployment failed${NC}"
     exit 1
 fi

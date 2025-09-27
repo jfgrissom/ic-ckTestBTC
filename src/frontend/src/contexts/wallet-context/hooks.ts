@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { Principal } from '@dfinity/principal';
-import { useConnect } from '@connect2ic/react';
+import { useAuth } from '@/contexts/auth-context';
 import { useWalletContext } from './index';
 import { TransferCapabilities } from './types';
 import {
@@ -93,7 +92,7 @@ export const useTransactions = () => {
 // Transfer operations hook - implements Transfer Method Matrix from PRD
 export const useTransfers = () => {
   const { state, dispatch } = useWalletContext();
-  const { principal } = useConnect();
+  const { principal } = useAuth();
 
   return useMemo(() => ({
     // Transfer functions aligned with PRD matrix
@@ -104,7 +103,7 @@ export const useTransfers = () => {
       if (!principal) {
         throw new Error('Not authenticated');
       }
-      return depositToCustody(dispatch, amount, Principal.fromText(principal));
+      return depositToCustody(dispatch, amount, principal);
     },
 
     // Transfer state

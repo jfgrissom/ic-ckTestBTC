@@ -1,24 +1,95 @@
 import { BackendActor } from '@/types/backend.types';
+import { createAuthenticatedActor, updateActorIdentity } from '@/services/actor.service';
+import { getIdentity } from '@/services/auth.service';
+import { idlFactory } from 'declarations/backend';
+import { canisterId } from 'declarations/backend';
+import { Identity } from '@dfinity/agent';
 
 /**
- * Backend service for Connect2IC v2 pattern
- * Works with actors provided by Connect2IC hooks
+ * Backend service using @dfinity/auth-client
+ * Creates and manages authenticated actors for backend canister
  */
 
-// Global state for backend actor
+// Module-level state for backend actor (functional paradigm)
 let backendActor: BackendActor | null = null;
 
 /**
- * Set the backend actor (called by hooks when actor is available)
+ * Initialize or update backend actor with current identity
+ * Creates a new authenticated actor for backend communication
+ */
+export const initializeBackendActor = async (): Promise<void> => {
+  const identity = getIdentity();
+  if (!identity) {
+    console.log('[BackendService] No identity available for backend actor');
+    backendActor = null;
+    return;
+  }
+
+  try {
+    backendActor = await createAuthenticatedActor<BackendActor>(
+      canisterId,
+      idlFactory,
+      identity
+    );
+    console.log('[BackendService] Backend actor initialized with principal:',
+      identity.getPrincipal().toString());
+  } catch (error) {
+    console.error('[BackendService] Failed to initialize backend actor:', error);
+    backendActor = null;
+  }
+};
+
+/**
+ * Update backend actor with new identity
+ * Called when user authentication changes
+ */
+export const updateBackendActor = async (identity: Identity | null): Promise<void> => {
+  if (!identity) {
+    console.log('[BackendService] Clearing backend actor (no identity)');
+    backendActor = null;
+    return;
+  }
+
+  try {
+    backendActor = await updateActorIdentity<BackendActor>(
+      canisterId,
+      idlFactory,
+      identity
+    );
+    console.log('[BackendService] Backend actor updated with principal:',
+      identity.getPrincipal().toString());
+  } catch (error) {
+    console.error('[BackendService] Failed to update backend actor:', error);
+    backendActor = null;
+  }
+};
+
+/**
+ * Set the backend actor (for compatibility with existing code)
+ * @deprecated Use initializeBackendActor() or updateBackendActor() instead
  */
 export const setBackendActor = (actor: BackendActor | null): void => {
+  console.warn('[BackendService] setBackendActor is deprecated. Use initializeBackendActor() instead.');
   backendActor = actor;
 };
 
 /**
  * Get current backend actor
+ * Attempts to initialize if not already available
  */
-export const getBackend = (): BackendActor | null => {
+export const getBackend = async (): Promise<BackendActor | null> => {
+  if (!backendActor) {
+    // Try to initialize if we have an identity
+    await initializeBackendActor();
+  }
+  return backendActor;
+};
+
+/**
+ * Get current backend actor synchronously
+ * Returns null if not initialized - use for cases where async init isn't possible
+ */
+export const getBackendSync = (): BackendActor | null => {
   return backendActor;
 };
 

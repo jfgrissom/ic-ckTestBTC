@@ -61,28 +61,13 @@ describe('SendReceiveTab', () => {
     vi.clearAllMocks();
   });
 
-  it('renders token balances correctly', () => {
+  it('renders ckTestBTC balance correctly', () => {
     render(<SendReceiveTab {...mockProps} />);
 
-    expect(screen.getByText('ICP Balance')).toBeInTheDocument();
-    expect(screen.getByText('1.00000000 ICP')).toBeInTheDocument();
     expect(screen.getByText('ckTestBTC Balance')).toBeInTheDocument();
     expect(screen.getByText('0.50000000 ckTestBTC')).toBeInTheDocument();
   });
 
-  it('allows selecting different tokens', () => {
-    render(<SendReceiveTab {...mockProps} />);
-
-    const icpSelectButton = screen.getAllByText('Select')[0];
-    const ckTestBTCSelectButton = screen.getAllByText('Select')[1];
-
-    fireEvent.click(ckTestBTCSelectButton);
-    // The component should update to show ckTestBTC as selected
-    // This would be more easily testable with data-testid attributes
-
-    fireEvent.click(icpSelectButton);
-    // The component should update to show ICP as selected
-  });
 
   it('renders send/receive tabs', () => {
     render(<SendReceiveTab {...mockProps} />);
@@ -94,7 +79,7 @@ describe('SendReceiveTab', () => {
   it('shows send interface by default', () => {
     render(<SendReceiveTab {...mockProps} />);
 
-    expect(screen.getByText('Send ICP')).toBeInTheDocument();
+    expect(screen.getByText('Send ckTestBTC')).toBeInTheDocument();
     expect(screen.getByText('Available to send')).toBeInTheDocument();
     expect(screen.getByText('Transaction Fee:')).toBeInTheDocument();
   });
@@ -105,17 +90,17 @@ describe('SendReceiveTab', () => {
     const receiveTab = screen.getByRole('tab', { name: /receive/i });
     fireEvent.click(receiveTab);
 
-    expect(screen.getByText('Receive ICP')).toBeInTheDocument();
-    expect(screen.getByText('Your Principal ID (for ICP):')).toBeInTheDocument();
+    expect(screen.getByText('Receive ckTestBTC')).toBeInTheDocument();
+    expect(screen.getByText('Your Principal ID (for ckTestBTC):')).toBeInTheDocument();
   });
 
   it('calls onOpenSendModal when send button is clicked', () => {
     render(<SendReceiveTab {...mockProps} />);
 
-    const sendButton = screen.getByRole('button', { name: /send icp/i });
+    const sendButton = screen.getByRole('button', { name: /send ckTestBTC/i });
     fireEvent.click(sendButton);
 
-    expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ICP');
+    expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ckTestBTC');
   });
 
   it('calls onOpenReceiveModal when receive details button is clicked', () => {
@@ -128,7 +113,7 @@ describe('SendReceiveTab', () => {
     const receiveDetailsButton = screen.getByRole('button', { name: /view receive details/i });
     fireEvent.click(receiveDetailsButton);
 
-    expect(mockProps.onOpenReceiveModal).toHaveBeenCalledWith('ICP');
+    expect(mockProps.onOpenReceiveModal).toHaveBeenCalledWith('ckTestBTC');
   });
 
   it('copies principal ID to clipboard', async () => {
@@ -145,10 +130,10 @@ describe('SendReceiveTab', () => {
   });
 
   it('disables send button when balance is zero', () => {
-    const zeroBalanceProps = { ...mockProps, icpBalance: '0' };
+    const zeroBalanceProps = { ...mockProps, ckTestBTCBalance: '0' };
     render(<SendReceiveTab {...zeroBalanceProps} />);
 
-    const sendButton = screen.getByRole('button', { name: /send icp/i });
+    const sendButton = screen.getByRole('button', { name: /send ckTestBTC/i });
     expect(sendButton).toBeDisabled();
   });
 
@@ -156,7 +141,7 @@ describe('SendReceiveTab', () => {
     const loadingProps = { ...mockProps, loading: true };
     render(<SendReceiveTab {...loadingProps} />);
 
-    const sendButton = screen.getByRole('button', { name: /send icp/i });
+    const sendButton = screen.getByRole('button', { name: /send ckTestBTC/i });
     expect(sendButton).toBeDisabled();
   });
 
@@ -193,13 +178,9 @@ describe('SendReceiveTab', () => {
 
     // Find quick action buttons
     const quickActionButtons = screen.getAllByText(/Send|Receive/);
-    const sendICPButtons = quickActionButtons.filter(btn => btn.textContent?.includes('Send ICP'));
-    const receiveICPButtons = quickActionButtons.filter(btn => btn.textContent?.includes('Receive ICP'));
     const sendckTestBTCButtons = quickActionButtons.filter(btn => btn.textContent?.includes('Send ckTestBTC'));
     const receiveckTestBTCButtons = quickActionButtons.filter(btn => btn.textContent?.includes('Receive ckTestBTC'));
 
-    expect(sendICPButtons.length).toBeGreaterThan(0);
-    expect(receiveICPButtons.length).toBeGreaterThan(0);
     expect(sendckTestBTCButtons.length).toBeGreaterThan(0);
     expect(receiveckTestBTCButtons.length).toBeGreaterThan(0);
   });
@@ -208,25 +189,25 @@ describe('SendReceiveTab', () => {
     render(<SendReceiveTab {...mockProps} />);
 
     // Test quick action buttons - we need to be more specific about which buttons we click
-    // since there are multiple "Send ICP" buttons on the page
+    // since there are multiple "Send ckTestBTC" buttons on the page
     const quickActionButtons = screen.getAllByRole('button');
 
     // Find the specific quick action buttons by their structure
-    const sendICPQuickAction = quickActionButtons.find(btn =>
-      btn.textContent === 'Send ICP' && btn.className.includes('h-20')
+    const sendckTestBTCQuickAction = quickActionButtons.find(btn =>
+      btn.textContent === 'Send ckTestBTC' && btn.className.includes('h-20')
     );
-    const receiveICPQuickAction = quickActionButtons.find(btn =>
-      btn.textContent === 'Receive ICP' && btn.className.includes('h-20')
+    const receiveckTestBTCQuickAction = quickActionButtons.find(btn =>
+      btn.textContent === 'Receive ckTestBTC' && btn.className.includes('h-20')
     );
 
-    if (sendICPQuickAction) {
-      fireEvent.click(sendICPQuickAction);
-      expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ICP');
+    if (sendckTestBTCQuickAction) {
+      fireEvent.click(sendckTestBTCQuickAction);
+      expect(mockProps.onOpenSendModal).toHaveBeenCalledWith('ckTestBTC');
     }
 
-    if (receiveICPQuickAction) {
-      fireEvent.click(receiveICPQuickAction);
-      expect(mockProps.onOpenReceiveModal).toHaveBeenCalledWith('ICP');
+    if (receiveckTestBTCQuickAction) {
+      fireEvent.click(receiveckTestBTCQuickAction);
+      expect(mockProps.onOpenReceiveModal).toHaveBeenCalledWith('ckTestBTC');
     }
   });
 
@@ -239,31 +220,20 @@ describe('SendReceiveTab', () => {
     expect(screen.getByText(/Low fixed fees for all token transfers/)).toBeInTheDocument();
   });
 
-  it('shows different fees for different tokens', () => {
+  it('shows ckTestBTC transaction fee', () => {
     render(<SendReceiveTab {...mockProps} />);
 
-    // Check ICP fee
-    expect(screen.getByText('0.0001 ICP')).toBeInTheDocument();
-
-    // Switch to ckTestBTC and check its fee
-    const ckTestBTCSelectButton = screen.getAllByText('Select')[1];
-    fireEvent.click(ckTestBTCSelectButton);
-
-    // Should show ckTestBTC fee (this might need to wait for state update)
-    setTimeout(() => {
-      expect(screen.getByText('0.00001 ckTestBTC')).toBeInTheDocument();
-    }, 100);
+    // Check ckTestBTC fee
+    expect(screen.getByText('0.00001 ckTestBTC')).toBeInTheDocument();
   });
 
-  it('formats balances correctly', () => {
+  it('formats balance correctly', () => {
     const props = {
       ...mockProps,
-      icpBalance: '123456789', // 1.23456789 ICP
       ckTestBTCBalance: '987654321', // 9.87654321 ckTestBTC
     };
     render(<SendReceiveTab {...props} />);
 
-    expect(screen.getByText('1.23456789 ICP')).toBeInTheDocument();
     expect(screen.getByText('9.87654321 ckTestBTC')).toBeInTheDocument();
   });
 
@@ -288,7 +258,7 @@ describe('SendReceiveTab', () => {
     const manyTransactions: Transaction[] = Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       tx_type: i % 2 === 0 ? 'Send' : 'Receive',
-      token: 'ICP',
+      token: 'ckTestBTC',
       amount: '10000000',
       from: 'sender-principal',
       to: 'receiver-principal',
@@ -333,15 +303,7 @@ describe('SendReceiveTab', () => {
     const receiveTab = screen.getByRole('tab', { name: /receive/i });
     fireEvent.click(receiveTab);
 
-    expect(screen.getByText('ICRC-1')).toBeInTheDocument(); // ICP standard
-
-    // Switch to ckTestBTC
-    const ckTestBTCSelectButton = screen.getAllByText('Select')[1];
-    fireEvent.click(ckTestBTCSelectButton);
-
-    // Should eventually show ICRC-2 for ckTestBTC
-    setTimeout(() => {
-      expect(screen.getByText('ICRC-2')).toBeInTheDocument();
-    }, 100);
+    // Should show ICRC-2 for ckTestBTC
+    expect(screen.getByText('ICRC-2')).toBeInTheDocument();
   });
 });

@@ -1,10 +1,10 @@
-# PRD: Multi-Token ckTestBTC Wallet
+# PRD: ckTestBTC Wallet
 
 ## Project Overview
 
 A comprehensive wallet application for managing ckTestBTC (chain-key Bitcoin
 testnet) tokens on the Internet Computer, with full support for Bitcoin testnet
-integration and ICP fee management.
+integration.
 
 ## Problem Statement
 
@@ -12,7 +12,6 @@ Users need a simple, intuitive interface to:
 
 - Convert **TestBTC** (Bitcoin testnet) coins to ckTestBTC tokens
 - Manage ckTestBTC balances and transfers
-- Handle ICP tokens for transaction fees
 - Track transaction history across multiple token types
 - Securely authenticate via Internet Identity
 
@@ -21,16 +20,15 @@ Users need a simple, intuitive interface to:
 
 ## Solution
 
-A React-based web application that provides a unified interface for multi-token
+A React-based web application that provides a unified interface for ckTestBTC
 wallet operations, with local mock canisters for development and production
 integration with IC mainnet canisters.
 
 ## Core Features
 
-### 1. Multi-Token Balance Display
+### 1. ckTestBTC Balance Display
 
 - **ckTestBTC Balance**: Current holdings in smallest units (satoshis)
-- **ICP Balance**: Available balance for transaction fees
 - **Real-time Updates**: Automatic balance refresh
 - **Visual Indicators**: Clear denomination display (8 decimals for ckTestBTC)
 
@@ -47,7 +45,7 @@ integration with IC mainnet canisters.
   - Derived from Principal + subaccount
 - **Principal ID**:
   - Core IC identity
-  - Can receive both ckTestBTC and ICP (default subaccount)
+  - Can receive ckTestBTC (default subaccount)
   - Format: `rdmx6-jaaaa-aaaaa-aaadq-cai`
 
 ### 3. Token Operations
@@ -120,11 +118,6 @@ it controls
   2. Burn ckTestBTC tokens
   3. Withdraw **TestBTC** to specified Bitcoin testnet address
 
-#### ICP Operations
-
-- **Send**: ICP ledger transfers
-- **Receive**: Display IC addresses for ICP deposits
-- **Fee Management**: Monitor ICP balance for transaction costs
 
 ### 4. Transaction History
 
@@ -136,7 +129,6 @@ Comprehensive audit trail with categorization:
 - **ckTestBTC Receives**: Incoming ICRC-1 transfers
 - **ckTestBTC Burns**: Conversion ckTestBTC → **TestBTC**
 - **TestBTC Withdrawals**: Bitcoin testnet4 withdrawals (with txid)
-- **ICP Sends/Receives**: ICP ledger operations
 
 **Note**: All Bitcoin operations use **testnet4** only. No mainnet Bitcoin (BTC)
 involved.
@@ -153,7 +145,6 @@ involved.
 
 - **TestBTC**: Bitcoin testnet4 (native Bitcoin testnet, NOT mainnet BTC)
 - **ckTestBTC**: ICRC-1/ICRC-2 token on IC mainnet (represents TestBTC 1:1)
-- **ICP**: ICP ledger token on IC mainnet (for transaction fees)
 
 **CRITICAL**: This application handles **TestBTC only**. Zero mainnet Bitcoin
 (BTC) exposure.
@@ -164,14 +155,12 @@ involved.
 
 - **ckTestBTC Ledger**: `mc6ru-gyaaa-aaaar-qaaaq-cai`
 - **ckTestBTC Minter**: `ml52i-qqaaa-aaaar-qaaba-cai`
-- **ICP Ledger**: `rrkah-fqaaa-aaaaa-aaaaq-cai`
 - **Internet Identity**: `rdmx6-jaaaa-aaaaa-aaadq-cai`
 
 #### Local Development (Mock Canisters)
 
 - **Mock ckTestBTC Ledger**: ICRC-1/2 implementation
 - **Mock ckTestBTC Minter**: Bitcoin address generation simulation
-- **Mock ICP Ledger**: ICP balance and transfer simulation
 
 ### Backend API Gateway
 
@@ -186,7 +175,7 @@ Central routing canister that:
 
 #### Core UI Components
 
-- **Dashboard**: Multi-token balance overview
+- **Dashboard**: ckTestBTC balance overview
 - **Send Form**: Token selector, recipient, amount, memo
 - **Receive Modal**: Three-address display with QR codes
 - **Transaction List**: Filterable history with transaction details
@@ -202,7 +191,7 @@ Central routing canister that:
 │ Bitcoin Testnet4 (for TestBTC deposits)│
 │ tb1q... [QR] [Copy]                     │
 ├─────────────────────────────────────────┤
-│ ckTestBTC/ICP Account                   │
+│ ckTestBTC Account                       │
 │ d4685b31... [QR] [Copy]                 │
 ├─────────────────────────────────────────┤
 │ Principal ID                            │
@@ -222,30 +211,26 @@ ic-ckTestBTC/
 ├── package.json              # Frontend dependencies
 ├── src/
 │   ├── backend/              # API gateway canister
-│   │   ├── src/lib.rs       # Multi-token routing logic
+│   │   ├── src/lib.rs       # ckTestBTC routing logic
 │   │   ├── backend.did      # Candid interface
 │   │   └── Cargo.toml       # Dependencies
-│   ├── mock_ckbtc_ledger/   # ICRC-1/2 mock (renamed from local_token)
+│   ├── mock_cktestbtc_ledger/   # ICRC-1/2 mock
 │   │   ├── src/lib.rs       # Token operations
-│   │   ├── mock_ckbtc_ledger.did
+│   │   ├── mock_cktestbtc_ledger.did
 │   │   └── Cargo.toml
-│   ├── mock_ckbtc_minter/   # Bitcoin operations mock
+│   ├── mock_cktestbtc_minter/   # Bitcoin operations mock
 │   │   ├── src/lib.rs       # Address generation, mint/burn
-│   │   ├── mock_ckbtc_minter.did
-│   │   └── Cargo.toml
-│   ├── mock_icp_ledger/     # ICP operations mock
-│   │   ├── src/lib.rs       # ICP balance and transfers
-│   │   ├── mock_icp_ledger.did
+│   │   ├── mock_cktestbtc_minter.did
 │   │   └── Cargo.toml
 │   └── frontend/            # React TypeScript application
 │       ├── src/
 │       │   ├── components/
 │       │   │   ├── auth/          # Internet Identity components
-│       │   │   ├── wallet/        # Multi-token wallet components
+│       │   │   ├── wallet/        # ckTestBTC wallet components
 │       │   │   └── common/        # Shared UI components
-│       │   ├── hooks/             # Multi-token wallet hooks
+│       │   ├── hooks/             # ckTestBTC wallet hooks
 │       │   ├── services/          # Multi-canister communication
-│       │   ├── types/             # Multi-token type definitions
+│       │   ├── types/             # ckTestBTC type definitions
 │       │   └── utils/
 │       └── public/
 └── scripts/                 # Build and deployment scripts
@@ -265,7 +250,7 @@ ic-ckTestBTC/
 ### Production Deployment
 
 1. **IC Mainnet**: Deploy backend to Internet Computer mainnet
-2. **Real Canisters**: Backend routes to actual ckTestBTC and ICP canisters
+2. **Real Canisters**: Backend routes to actual ckTestBTC canisters
 3. **Testnet Integration**: Real Bitcoin testnet4 address generation and
    monitoring
 4. **Production Security**: Full threshold ECDSA and Internet Identity
@@ -275,12 +260,11 @@ ic-ckTestBTC/
 
 ### Functional Requirements
 
-- [ ] Users can view ckTestBTC and ICP balances
+- [ ] Users can view ckTestBTC balances
 - [ ] Users can generate Bitcoin testnet deposit addresses
 - [ ] Users can convert TestBTC to ckTestBTC (mint)
 - [ ] Users can convert ckTestBTC to TestBTC (burn)
 - [ ] Users can send/receive ckTestBTC via ICRC-1
-- [ ] Users can send/receive ICP for fees
 - [ ] Users can view complete transaction history
 - [ ] Users can authenticate via Internet Identity
 
@@ -296,7 +280,7 @@ ic-ckTestBTC/
 
 ### User Experience Requirements
 
-- [ ] Intuitive multi-token interface
+- [ ] Intuitive ckTestBTC interface
 - [ ] Clear address type differentiation
 - [ ] QR code generation for addresses
 - [ ] Transaction status indicators
@@ -310,7 +294,7 @@ ic-ckTestBTC/
 - **Canister Communication**: Comprehensive error handling for inter-canister
   calls
 - **Bitcoin Integration**: Proper handling of Bitcoin testnet confirmation times
-- **Fee Management**: Clear warnings for insufficient ICP balances
+- **Transaction Management**: Clear confirmations for all operations
 - **State Consistency**: Transaction atomicity across multiple canisters
 
 ### Security Considerations

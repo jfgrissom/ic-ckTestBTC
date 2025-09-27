@@ -1,5 +1,6 @@
 import { Principal } from '@dfinity/principal';
 import { getBackend, ensureBackendReady, testBackendConnection } from './backend.service';
+import { useFaucetDirect } from './faucet.service';
 import { getNetworkConfig } from '@/types/backend.types';
 import { getVirtualBalance as getCustodialBalance } from './custodial-wallet.service';
 
@@ -281,7 +282,7 @@ const transferViaDirectLedger = async (
 export const useFaucet = async (): Promise<{ success: boolean; message?: string; error?: string }> => {
   const backend = getBackend();
   const config = getNetworkConfig();
-  
+
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -291,11 +292,17 @@ export const useFaucet = async (): Promise<{ success: boolean; message?: string;
   }
 
   try {
-    const result = await backend.faucet();
-    if ('Ok' in result) {
-      return { success: true, message: result.Ok };
+    // Get the principal of the authenticated user
+    const principalResult = await backend.get_principal();
+    const principal = Principal.fromText(principalResult);
+
+    // Use the faucet service to mint tokens
+    const result = await useFaucetDirect(principal);
+
+    if (result.success) {
+      return { success: true, message: result.message };
     } else {
-      return { success: false, error: result.Err };
+      return { success: false, error: result.error };
     }
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to get test tokens' };

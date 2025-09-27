@@ -90,10 +90,13 @@ validate_environment() {
     echo -e "${BLUE}🔍 Validating deployment environment...${NC}"
 
     # Check required tools
-    local required_tools=("dfx" "jq" "cargo")
+    local required_tools=("dfx" "jq" "cargo" "candid-extractor")
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             echo -e "${RED}❌ Required tool not found: $tool${NC}"
+            if [ "$tool" = "candid-extractor" ]; then
+                echo -e "${YELLOW}Install with: cargo install candid-extractor${NC}"
+            fi
             exit 1
         fi
     done
@@ -114,7 +117,7 @@ validate_environment() {
 
 # Function to build with production checks
 build_with_checks() {
-    echo -e "${BLUE}🔨 Building for production deployment...${NC}"
+    echo -e "${BLUE}🔨 Preparing for production deployment...${NC}"
 
     # Verify and load environment variables
     echo -e "${GREEN}Loading environment variables...${NC}"
@@ -125,16 +128,83 @@ build_with_checks() {
         exit 1
     fi
 
-    # Build backend
-    echo -e "${GREEN}Building backend canister...${NC}"
-    ./scripts/build-backend.sh
+    # NOTE: We do NOT build here anymore
+    # The actual production build happens in deploy_with_upgrade() function
+    # This ensures a clean build without development features
+    echo -e "${YELLOW}⚠️  Production build will be performed during deployment${NC}"
+    echo -e "${YELLOW}    This ensures clean build without development features${NC}"
+    echo -e "${YELLOW}    Build includes verification that no dev features are present${NC}"
 
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ Production build failed${NC}"
+    echo -e "${GREEN}✅ Pre-deployment preparation complete${NC}"
+}
+
+# Function to run production safety tests
+run_production_safety_tests() {
+    echo -e "${BLUE}🧪 Running Production Safety Tests...${NC}"
+    echo -e "${YELLOW}These tests verify the production build is safe for deployment${NC}"
+    echo ""
+
+    # Test 1: Verify NO development features in production build
+    echo -e "${BLUE}Test 1: Development Feature Detection${NC}"
+    echo -e "${YELLOW}Expected: FAIL (no faucet function should be found)${NC}"
+
+    if candid-extractor target/wasm32-unknown-unknown/release/backend.wasm 2>/dev/null | grep -q "faucet"; then
+        echo -e "${BOLD}${RED}❌ FATAL ERROR: Development features detected in production build!${NC}"
+        echo -e "${RED}The faucet() function was found in the production WASM.${NC}"
+        echo -e "${RED}This is a critical security issue. Deployment aborted.${NC}"
+        echo -e "${RED}Production builds must NEVER contain development features.${NC}"
+        exit 1
+    else
+        echo -e "${GREEN}✅ Test 1 PASSED: No development features found${NC}"
+    fi
+    echo ""
+
+    # Test 2: Verify production canister IDs are being used
+    echo -e "${BLUE}Test 2: Production Configuration Check${NC}"
+    echo -e "${YELLOW}Checking that production canister IDs are configured${NC}"
+
+    if [ -z "$IC_CKTESTBTC_CANISTER_ID" ]; then
+        echo -e "${RED}❌ FATAL ERROR: IC_CKTESTBTC_CANISTER_ID not set${NC}"
         exit 1
     fi
 
-    echo -e "${GREEN}✅ Production build successful${NC}"
+    if [ "$IC_CKTESTBTC_CANISTER_ID" != "g4xu7-jiaaa-aaaan-aaaaq-cai" ]; then
+        echo -e "${YELLOW}⚠️  Warning: Non-standard IC ckTestBTC canister ID: $IC_CKTESTBTC_CANISTER_ID${NC}"
+        echo -e "${YELLOW}   Expected: g4xu7-jiaaa-aaaan-aaaaq-cai${NC}"
+        echo -e "${YELLOW}   This may be intentional for testing${NC}"
+    fi
+    echo -e "${GREEN}✅ Test 2 PASSED: Production configuration verified${NC}"
+    echo ""
+
+    # Test 3: WASM size and basic validation
+    echo -e "${BLUE}Test 3: WASM File Validation${NC}"
+    WASM_FILE="target/wasm32-unknown-unknown/release/backend.wasm"
+
+    if [ ! -f "$WASM_FILE" ]; then
+        echo -e "${RED}❌ FATAL ERROR: Production WASM file not found${NC}"
+        exit 1
+    fi
+
+    WASM_SIZE=$(stat -f%z "$WASM_FILE" 2>/dev/null || stat -c%s "$WASM_FILE" 2>/dev/null)
+    echo -e "${GREEN}✅ Test 3 PASSED: WASM file exists (${WASM_SIZE} bytes)${NC}"
+    echo ""
+
+    # Test 4: Candid interface validation
+    echo -e "${BLUE}Test 4: Candid Interface Validation${NC}"
+    FUNCTION_COUNT=$(candid-extractor "$WASM_FILE" 2>/dev/null | grep -E "^\s+[a-zA-Z_]" | wc -l | tr -d ' ')
+
+    if [ "$FUNCTION_COUNT" -lt 10 ]; then
+        echo -e "${RED}❌ FATAL ERROR: Too few functions found in Candid interface ($FUNCTION_COUNT)${NC}"
+        echo -e "${RED}This suggests the build may be incomplete${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}✅ Test 4 PASSED: Candid interface contains $FUNCTION_COUNT functions${NC}"
+    echo ""
+
+    echo -e "${BOLD}${GREEN}🎉 ALL PRODUCTION SAFETY TESTS PASSED${NC}"
+    echo -e "${GREEN}The production build is verified safe for deployment${NC}"
+    echo ""
 }
 
 # Function to deploy with upgrade mode
@@ -150,35 +220,50 @@ deploy_with_upgrade() {
     echo -e "${YELLOW}⚠️  PRODUCTION BUILD: Excluding all development-only features${NC}"
     echo -e "${YELLOW}⚠️  This means no faucet function will exist in production binary${NC}"
 
-    # Create a backup of dfx.json and temporarily modify build args
-    echo -e "${GREEN}Backing up dfx.json...${NC}"
-    cp dfx.json dfx.json.backup
+    # CRITICAL: Clean any existing builds to ensure production safety
+    echo -e "${RED}🧹 Cleaning existing build artifacts...${NC}"
+    echo -e "${YELLOW}This ensures no development features can leak into production${NC}"
+    cargo clean -p backend
+    rm -f target/wasm32-unknown-unknown/release/backend.wasm
 
-    # Replace development build args with production (no features)
-    echo -e "${GREEN}Configuring production build (no development features)...${NC}"
-    sed -i.tmp 's/"args": "--features development"/"args": ""/' dfx.json
+    # Build production WASM explicitly WITHOUT development features
+    echo -e "${GREEN}Building production WASM (no development features)...${NC}"
+    echo -e "${YELLOW}Building with environment variables:${NC}"
+    echo -e "${YELLOW}  IC_CKTESTBTC_CANISTER_ID=${IC_CKTESTBTC_CANISTER_ID}${NC}"
 
-    # Deploy with production configuration
-    LOCAL_MOCK_LEDGER_CANISTER_ID="$LOCAL_MOCK_LEDGER_CANISTER_ID" \
+    # Build with production configuration (no --features flag)
+    cd src/backend
     IC_CKTESTBTC_CANISTER_ID="$IC_CKTESTBTC_CANISTER_ID" \
-    dfx deploy --network ic --mode upgrade backend
+    cargo build --target wasm32-unknown-unknown --release
 
-    # Store deployment result
-    DEPLOY_RESULT=$?
-
-    # Restore original dfx.json
-    echo -e "${GREEN}Restoring original dfx.json...${NC}"
-    mv dfx.json.backup dfx.json
-    rm -f dfx.json.tmp
-
-    # Check deployment result
-    if [ $DEPLOY_RESULT -ne 0 ]; then
-        echo -e "${RED}❌ Production deployment failed${NC}"
-        echo -e "${YELLOW}💡 Check the error above and the deployment logs${NC}"
+    # Check if build was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Production build failed${NC}"
+        cd ../..
         exit 1
     fi
+    cd ../..
 
-    echo -e "${GREEN}✅ Deployment to IC successful${NC}"
+    # CRITICAL: Verify NO development features in production WASM
+    echo -e "${YELLOW}🔍 Verifying production build safety...${NC}"
+    if candid-extractor target/wasm32-unknown-unknown/release/backend.wasm 2>/dev/null | grep -q "faucet"; then
+        echo -e "${BOLD}${RED}❌ FATAL ERROR: Development features detected in production build!${NC}"
+        echo -e "${RED}The faucet() function was found in the production WASM.${NC}"
+        echo -e "${RED}This is a critical security issue. Deployment aborted.${NC}"
+        exit 1
+    else
+        echo -e "${GREEN}✅ Production build verified - NO development features found${NC}"
+    fi
+
+    # Show WASM info
+    WASM_FILE="target/wasm32-unknown-unknown/release/backend.wasm"
+    if [ -f "$WASM_FILE" ]; then
+        WASM_SIZE=$(stat -f%z "$WASM_FILE" 2>/dev/null || stat -c%s "$WASM_FILE" 2>/dev/null)
+        echo -e "${GREEN}📦 Production WASM: ${WASM_FILE} (${WASM_SIZE} bytes)${NC}"
+    fi
+
+    echo -e "${GREEN}✅ Production build and verification complete${NC}"
+    echo -e "${YELLOW}Ready for deployment after safety tests${NC}"
 }
 
 # Function to verify deployment
@@ -269,15 +354,24 @@ echo ""
 build_with_checks
 echo ""
 
+deploy_with_upgrade
+echo ""
+
+run_production_safety_tests
+echo ""
+
 # FINAL SAFETY CHECKPOINT: Last chance to abort
 echo -e "${BOLD}${RED}🚨 FINAL CONFIRMATION REQUIRED 🚨${NC}"
+echo -e "${YELLOW}Production build completed and safety tests passed.${NC}"
 require_confirmation \
-    "This is your LAST CHANCE to abort. Deploy to production now?" \
+    "This is your LAST CHANCE to abort. Deploy verified production WASM to IC now?" \
     "Deploy to production"
 
 echo ""
 
-deploy_with_upgrade
+# Deploy the verified production WASM
+echo -e "${GREEN}Deploying verified production WASM to IC...${NC}"
+dfx canister install backend --network ic --mode upgrade --wasm target/wasm32-unknown-unknown/release/backend.wasm --yes
 echo ""
 
 verify_deployment
