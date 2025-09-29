@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn, formatAmount } from '@/lib';
+import { cn, formatAmount, formatAddressForDisplay } from '@/lib';
 
 export interface Transaction {
   id: number;
@@ -26,12 +26,6 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   className,
 }) => {
 
-  const formatAddress = (address: string) => {
-    if (address.length > 20) {
-      return `${address.slice(0, 10)}...${address.slice(-10)}`;
-    }
-    return address;
-  };
 
   const formatTimestamp = (timestamp: number) => {
     // Convert nanoseconds to milliseconds
@@ -96,16 +90,16 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
               </div>
               <div className="text-sm text-gray-500">
                 {transaction.tx_type === 'Send' && (
-                  <>To: {formatAddress(transaction.to)}</>
+                  <>To: {formatAddressForDisplay(transaction.to)}</>
                 )}
                 {transaction.tx_type === 'Receive' && (
-                  <>From: {formatAddress(transaction.from)}</>
+                  <>From: {formatAddressForDisplay(transaction.from)}</>
                 )}
                 {transaction.tx_type === 'Deposit' && (
-                  <>From TestBTC: {formatAddress(transaction.from)}</>
+                  <>From TestBTC: {formatAddressForDisplay(transaction.from)}</>
                 )}
                 {transaction.tx_type === 'Withdraw' && (
-                  <>To TestBTC: {formatAddress(transaction.to)}</>
+                  <>To TestBTC: {formatAddressForDisplay(transaction.to)}</>
                 )}
                 {transaction.tx_type === 'Mint' && (
                   <>New Tokens Minted</>

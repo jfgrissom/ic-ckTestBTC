@@ -5,6 +5,7 @@ import QRCode from '@/components/shared/qr-code';
 import TokenBalance from '@/components/shared/token-balance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Send,
@@ -100,14 +101,17 @@ const SendReceiveTab: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded break-all">
-                    {principal ? `${principal.slice(0, 15)}...${principal.slice(-15)}` : 'Not connected'}
-                  </span>
+                  <Input
+                    value={principal || 'Not connected'}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleCopyPrincipal}
                     disabled={!principal}
+                    className="shrink-0"
                   >
                     {isCopied ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />

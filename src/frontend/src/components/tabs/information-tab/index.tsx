@@ -1,29 +1,29 @@
-import React from 'react';
-import BalanceSection from '@/components/wallet/balance-section';
-import ActionButton from '@/components/shared/action-button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useWalletBalance, useTransfers } from '@/contexts/wallet-context/hooks';
-import { useModals } from '@/hooks/use-modals';
+import React from 'react'
+import BalanceSection from '@/components/wallet/balance-section'
+import ActionButton from '@/components/shared/action-button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useWalletBalance, useTransfers } from '@/contexts/wallet-context/hooks'
+import { useModals } from '@/hooks/use-modals'
 import {
   ArrowUpDown,
   Download,
   Upload,
   Send,
   ArrowDownToLine,
-} from 'lucide-react';
+} from 'lucide-react'
 
 const InformationTab: React.FC = () => {
-  const { walletStatus, loading, error, initialized, refresh } = useWalletBalance();
-  const { depositToCustody } = useTransfers();
-  const { openModal } = useModals();
+  const { walletStatus, loading, error, initialized, refresh } = useWalletBalance()
+  const { depositToCustody } = useTransfers()
+  const { openModal } = useModals()
 
   const handleDepositToCustody = async (amount: string) => {
     try {
-      await depositToCustody(amount);
+      await depositToCustody(amount)
     } catch (error) {
-      console.error('Deposit to custody failed:', error);
+      console.error('Deposit to custody failed:', error)
     }
-  };
+  }
   return (
     <div className="space-y-6">
       {/* Balances Section */}
@@ -52,7 +52,7 @@ const InformationTab: React.FC = () => {
         <CardContent className="space-y-4">
           {/* IC Token Actions */}
           <div>
-            <h3 className="text-lg font-medium mb-3 text-blue-700">IC Token Operations</h3>
+            <h3 className="text-lg font-medium mb-3 text-blue-700">Internet Computer ckTestBTC Token Operations</h3>
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
                 onClick={() => openModal('send')}
@@ -76,7 +76,7 @@ const InformationTab: React.FC = () => {
 
           {/* Bitcoin TestNet Actions */}
           <div>
-            <h3 className="text-lg font-medium mb-3 text-orange-700">Bitcoin TestNet Operations</h3>
+            <h3 className="text-lg font-medium mb-3 text-orange-700">Native Bitcoin TestNet Operations</h3>
             <div className="grid grid-cols-2 gap-3">
               <ActionButton
                 onClick={() => openModal('deposit')}
@@ -118,7 +118,7 @@ const InformationTab: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default InformationTab;
+export default InformationTab
