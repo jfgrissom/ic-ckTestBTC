@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import SendModal from '@/components/modals/send-modal';
 import ReceiveModal from '@/components/modals/receive-modal';
 import DepositModal from '@/components/modals/deposit-modal';
@@ -46,7 +46,7 @@ const ModalRenderer: React.FC = () => {
   const { principal } = useWalletState();
 
   // Send modal handler
-  const handleSend = async (
+  const handleSend = useCallback(async (
     _token: string,
     recipient: string,
     amount: string,
@@ -54,29 +54,29 @@ const ModalRenderer: React.FC = () => {
   ) => {
     await sendTokens(recipient, amount, usePersonalFunds);
     closeModal();
-  };
+  }, [sendTokens, closeModal]);
 
   // Withdraw modal handler (PRD Matrix - only custodial funds can be withdrawn)
-  const handleWithdraw = async (address: string, amount: string) => {
+  const handleWithdraw = useCallback(async (address: string, amount: string) => {
     await withdrawFromCustody(address, amount);
     closeModal();
-  };
+  }, [withdrawFromCustody, closeModal]);
 
   // Wrapper functions to match modal expectations
-  const handleDepositToCustody = async (amount: string): Promise<void> => {
+  const handleDepositToCustody = useCallback(async (amount: string): Promise<void> => {
     await depositToCustody(amount);
-  };
+  }, [depositToCustody]);
 
-  const handleGetDepositAddress = async (): Promise<string> => {
+  const handleGetDepositAddress = useCallback(async (): Promise<string> => {
     const result = await getDepositAddress();
     if (result && result.success && result.address) {
       return result.address;
     }
     throw new Error(result?.error || 'Failed to get deposit address');
-  };
+  }, [getDepositAddress]);
 
   // Wrapper for validation to match SendModal expected signature
-  const handleValidateTransfer = (
+  const handleValidateTransfer = useCallback((
     recipient: string,
     amount: string,
     _token: string,
@@ -88,7 +88,7 @@ const ModalRenderer: React.FC = () => {
       errors: result.errors,
       details: result.details
     };
-  };
+  }, [validateSendInputs]);
 
   return (
     <>
