@@ -58,14 +58,14 @@ const transformBackendTransaction = (backendTx: BackendTransaction): Transaction
 };
 
 export const getTransactionHistory = async (): Promise<TransactionServiceResult> => {
-  const backendActor = getBackend();
+  const backendActor = await getBackend();
 
   if (!backendActor) {
     return { success: false, error: 'Backend not initialized' };
   }
 
   try {
-    const result = await (backendActor as any).get_transaction_history();
+    const result = await backendActor.get_transaction_history();
     const transactions = result.map(transformBackendTransaction);
 
     return {
@@ -82,7 +82,7 @@ export const getTransactionHistory = async (): Promise<TransactionServiceResult>
 };
 
 export const getTransaction = async (id: number): Promise<TransactionResult> => {
-  const backendActor = getBackend();
+  const backendActor = await getBackend();
 
   if (!backendActor) {
     return { success: false, error: 'Backend not initialized' };
@@ -97,7 +97,7 @@ export const getTransaction = async (id: number): Promise<TransactionResult> => 
       };
     }
 
-    const result = await (backendActor as any).get_transaction(BigInt(id));
+    const result = await backendActor.get_transaction(BigInt(id));
 
     if (result.length > 0) {
       const transaction = transformBackendTransaction(result[0]);

@@ -75,7 +75,7 @@ export const getWalletStatus = async (): Promise<{ success: boolean; status?: Wa
  * Deposit personal funds into custody
  */
 export const depositToCustody = async (amount: string): Promise<{ success: boolean; receipt?: any; error?: string }> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -131,7 +131,7 @@ export const getBalance = async (useVirtualBalance: boolean = true): Promise<{ s
   }
 
   // Traditional balance (direct from ckTestBTC ledger)
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -155,7 +155,7 @@ export const getBalance = async (useVirtualBalance: boolean = true): Promise<{ s
  * Get Bitcoin testnet address
  */
 export const getBtcAddress = async (): Promise<{ success: boolean; address?: string; error?: string }> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -208,7 +208,7 @@ const transferViaCustodialProxy = async (
   recipientPrincipal: string,
   amount: string
 ): Promise<{ success: boolean; blockIndex?: string; error?: string; method: string }> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized', method: 'custodial' };
   }
@@ -280,7 +280,7 @@ const transferViaDirectLedger = async (
  * Use faucet to get test tokens (local development only)
  */
 export const useFaucet = async (): Promise<{ success: boolean; message?: string; error?: string }> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   const config = getNetworkConfig();
 
   if (!backend) {

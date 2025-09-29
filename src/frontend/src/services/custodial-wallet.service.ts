@@ -148,7 +148,7 @@ const formatTransferError = (error: any): string => {
  * Get user's virtual balance in the custodial wallet
  */
 export const getVirtualBalance = async (): Promise<VirtualBalanceResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -169,7 +169,7 @@ export const getVirtualBalance = async (): Promise<VirtualBalanceResult> => {
  * Uses direct ledger transfer (PRD compliant Row 2 pattern)
  */
 export const depositFunds = async (amount: string, userPrincipal: Principal): Promise<DepositResult> => {
-  const backendActor = getBackend();
+  const backendActor = await getBackend();
   if (!backendActor) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -266,7 +266,7 @@ export const depositFunds = async (amount: string, userPrincipal: Principal): Pr
  * Withdraw ckTestBTC from custodial backend to user's wallet
  */
 export const withdrawFunds = async (amount: string): Promise<WithdrawResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -314,7 +314,7 @@ export const virtualTransfer = async (
   recipientPrincipal: string,
   amount: string
 ): Promise<VirtualTransferResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -361,7 +361,7 @@ export const virtualTransfer = async (
  * Get custodial transaction history
  */
 export const getCustodialTransactionHistory = async (): Promise<CustodialServiceResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -375,7 +375,7 @@ export const getCustodialTransactionHistory = async (): Promise<CustodialService
       };
     }
 
-    const transactions = await (backend as any).get_custodial_transaction_history();
+    const transactions = await backend.get_custodial_transaction_history();
 
     // Transform transactions to frontend format
     const formattedTransactions = transactions.map((tx: any) => ({
@@ -407,7 +407,7 @@ export const getCustodialTransactionHistory = async (): Promise<CustodialService
  * Get backend reserve status (solvency information)
  */
 export const getReserveStatus = async (): Promise<CustodialServiceResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
   }
@@ -421,7 +421,7 @@ export const getReserveStatus = async (): Promise<CustodialServiceResult> => {
       };
     }
 
-    const status = await (backend as any).get_reserve_status();
+    const status = await backend.get_reserve_status();
 
     return {
       success: true,

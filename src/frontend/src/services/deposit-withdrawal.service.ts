@@ -8,7 +8,7 @@ interface DepositWithdrawalResult {
 }
 
 export const getDepositAddress = async (): Promise<DepositWithdrawalResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
   console.log('[Deposit Service] Getting deposit address, backend:', backend ? 'available' : 'not available');
 
   if (!backend) {
@@ -24,7 +24,7 @@ export const getDepositAddress = async (): Promise<DepositWithdrawalResult> => {
       };
     }
 
-    const result = await (backend as any).get_deposit_address();
+    const result = await backend.get_deposit_address();
 
     if ('Ok' in result) {
       return {
@@ -47,7 +47,7 @@ export const getDepositAddress = async (): Promise<DepositWithdrawalResult> => {
 };
 
 export const withdrawTestBTC = async (address: string, amount: string): Promise<DepositWithdrawalResult> => {
-  const backend = getBackend();
+  const backend = await getBackend();
 
   if (!backend) {
     return { success: false, error: 'Backend not initialized' };
@@ -76,7 +76,7 @@ export const withdrawTestBTC = async (address: string, amount: string): Promise<
     }
 
     const amountBigInt = BigInt(amountSatoshis);
-    const result = await (backend as any).withdraw_testbtc(address, amountBigInt);
+    const result = await backend.withdraw_testbtc(address, amountBigInt);
 
     if ('Ok' in result) {
       return {
