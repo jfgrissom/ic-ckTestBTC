@@ -248,7 +248,7 @@ const transferViaCustodialProxy = async (
 /**
  * Transfer via direct ledger (for personal funds)
  * Used when: User Primary + No Subaccount + Balance Available
- * Uses Connect2IC ckTestBTC ledger actor for ICRC-1 transfers
+ * Uses authenticated ckTestBTC ledger actor for ICRC-1 transfers
  */
 const transferViaDirectLedger = async (
   recipientPrincipal: string,
@@ -293,8 +293,7 @@ export const useFaucet = async (): Promise<{ success: boolean; message?: string;
 
   try {
     // Get the principal of the authenticated user
-    const principalResult = await backend.get_principal();
-    const principal = Principal.fromText(principalResult);
+    const principal = await backend.get_principal();
 
     // Use the faucet service to mint tokens
     const result = await useFaucetDirect(principal);

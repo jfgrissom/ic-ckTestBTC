@@ -45,6 +45,23 @@ This document lists the core features of the ckTestBTC Wallet application.
     - User can send custodial ckTestBTC to another IC user.
     - User can send custodial ckTestBTC to another user's custodial wallet.
 
+## Features by Screen
+
+- **Home Screen**
+  - Presents a loader notifying the user that the app is initializing.
+    - Presents a login button to allow the user to login.
+  - Post Authentication
+    - User is presented with the Wallet Screen.
+- **Wallet Screen**
+  - Header
+    - There is a logout button.
+    - The user's Principal string is shown (but and is truncated for space).
+  - Tabs
+    - Information Tab
+    - Deposit & Withdrawals Tab
+    - Send & Receive Tab
+    - Transactions
+
 ## Security
 
 - ✅ **Secure Authentication:** Integration with Internet Identity ensures

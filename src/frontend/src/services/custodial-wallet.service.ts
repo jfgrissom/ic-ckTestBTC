@@ -1,6 +1,5 @@
 import { Principal } from '@dfinity/principal';
 import { getBackend } from './backend.service';
-import { getConnectLedgerActor } from './ledger.service';
 import * as backend from 'declarations/backend';
 
 interface CustodialServiceResult {
@@ -67,81 +66,15 @@ const transferToCustodialAccount = async (
   amount: string
 ): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
   try {
-    const ledgerActor = getConnectLedgerActor();
-    if (!ledgerActor) {
-      throw new Error('Ledger actor not initialized. Please reconnect your wallet.');
-    }
+    // Import ledger service function dynamically to avoid circular dependencies
+    const { transferToSubaccount } = await import('./ledger.service');
 
-    // Convert ckTestBTC to satoshis
-    const amountBigInt = BigInt(Math.floor(Number(amount) * 100000000));
-
-    // ICRC-1 transfer arguments with subaccount
-    const transferArgs = {
-      from_subaccount: [] as [] | [Uint8Array], // User's default account (empty array for None)
-      to: {
-        owner: backendPrincipal,
-        subaccount: [userSubaccount] as [] | [Uint8Array], // Array for Some(subaccount)
-      },
-      amount: amountBigInt,
-      fee: [BigInt(10)] as [] | [bigint], // 10 satoshi fee
-      memo: [] as [],
-      created_at_time: [BigInt(Date.now() * 1000000)] as [] | [bigint],
-    };
-
-    console.log('[Custodial Service] Calling icrc1_transfer with args:', {
-      to_owner: backendPrincipal.toString(),
-      to_subaccount: Array.from(userSubaccount).map(b => b.toString(16).padStart(2, '0')).join(''),
-      amount: amount + ' ckTestBTC',
-      amountSatoshis: amountBigInt.toString(),
-    });
-
-    const result = await ledgerActor.icrc1_transfer(transferArgs);
-
-    if ('Ok' in result && result.Ok !== undefined) {
-      const blockIndex = result.Ok.toString();
-      console.log('[Custodial Service] Transfer successful, block index:', blockIndex);
-      return { success: true, blockIndex };
-    } else if ('Err' in result && result.Err !== undefined) {
-      const error = formatTransferError(result.Err);
-      console.error('[Custodial Service] Transfer failed:', error);
-      return { success: false, error };
-    } else {
-      console.error('[Custodial Service] Transfer failed: Unknown error');
-      return { success: false, error: 'Unknown transfer error' };
-    }
+    return await transferToSubaccount(backendPrincipal, userSubaccount, amount);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Transfer failed';
     console.error('[Custodial Service] Transfer error:', error);
     return { success: false, error: errorMessage };
   }
-};
-
-// Helper to format transfer errors (copied from ledger.service.ts)
-const formatTransferError = (error: any): string => {
-  if ('BadFee' in error && error.BadFee) {
-    const expectedFee = (Number(error.BadFee.expected_fee) / 100000000).toFixed(8);
-    return `Bad fee. Expected: ${expectedFee} ckTestBTC`;
-  }
-  if ('InsufficientFunds' in error && error.InsufficientFunds) {
-    const balance = (Number(error.InsufficientFunds.balance) / 100000000).toFixed(8);
-    return `Insufficient funds. Balance: ${balance} ckTestBTC`;
-  }
-  if ('TooOld' in error) {
-    return 'Transaction too old';
-  }
-  if ('CreatedInFuture' in error) {
-    return 'Transaction created in future';
-  }
-  if ('Duplicate' in error && error.Duplicate) {
-    return `Duplicate transaction. Original block: ${error.Duplicate.duplicate_of}`;
-  }
-  if ('TemporarilyUnavailable' in error) {
-    return 'Service temporarily unavailable';
-  }
-  if ('GenericError' in error && error.GenericError) {
-    return error.GenericError.message;
-  }
-  return 'Unknown transfer error';
 };
 
 /**

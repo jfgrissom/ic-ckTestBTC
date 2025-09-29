@@ -97,59 +97,6 @@ export const updateLedgerActor = async (identity: Identity | null): Promise<void
   }
 };
 
-/**
- * Set the Connect2IC ledger actor (for compatibility)
- * @deprecated Use initializeLedgerActor() or updateLedgerActor() instead
- */
-export const setConnectLedgerActor = (actor: unknown): void => {
-  console.warn('[LedgerService] setConnectLedgerActor is deprecated. Use initializeLedgerActor() instead.');
-  // Handle null case when clearing the actor
-  if (actor === null) {
-    console.log('[Ledger Service] Clearing ledger actor');
-    ledgerActor = null;
-    return;
-  }
-
-  // Type guard to ensure actor has required ICRC-1 methods
-  if (isValidLedgerActor(actor)) {
-    console.log('[Ledger Service] Setting ledger actor');
-    ledgerActor = actor;
-  } else {
-    console.error('[Ledger Service] Invalid ledger actor: missing required ICRC-1 methods');
-    ledgerActor = null;
-    throw new Error('Invalid ledger actor: missing required ICRC-1 methods');
-  }
-};
-
-/**
- * Get current ledger actor
- * @deprecated Use getLedgerActor() instead
- */
-export const getConnectLedgerActor = (): LedgerActor | null => {
-  return ledgerActor;
-};
-
-/**
- * Type guard to validate ledger actor interface
- */
-const isValidLedgerActor = (actor: unknown): actor is LedgerActor => {
-  if (!actor || typeof actor !== 'object') {
-    return false;
-  }
-
-  const requiredMethods = ['icrc1_balance_of', 'icrc1_transfer', 'icrc1_fee'];
-  return requiredMethods.every(method =>
-    method in actor && typeof (actor as Record<string, unknown>)[method] === 'function'
-  );
-};
-
-/**
- * Clear ledger actor
- */
-export const clearConnectLedgerActor = (): void => {
-  ledgerActor = null;
-};
-
 
 
 /**
@@ -170,10 +117,58 @@ const getLedgerActor = async (): Promise<LedgerActor> => {
 };
 
 /**
- * Get ledger actor synchronously - returns null if not initialized
+ * Transfer tokens to a custodial account (with subaccount)
+ * Used for depositing to backend canister with user-specific subaccount
  */
-const getLedgerActorSync = (): LedgerActor | null => {
-  return ledgerActor;
+export const transferToSubaccount = async (
+  toPrincipal: Principal,
+  toSubaccount: Uint8Array,
+  amount: string
+): Promise<{ success: boolean; blockIndex?: string; error?: string }> => {
+  try {
+    const actor = await getLedgerActor();
+
+    // Convert ckTestBTC to satoshis
+    const amountBigInt = BigInt(Math.floor(Number(amount) * 100000000));
+
+    const transferArgs: TransferArgs = {
+      from_subaccount: [], // User's default account (empty array for None)
+      to: {
+        owner: toPrincipal,
+        subaccount: [toSubaccount], // Array for Some(subaccount)
+      },
+      amount: amountBigInt,
+      fee: [BigInt(10)], // 10 satoshi fee
+      memo: [],
+      created_at_time: [BigInt(Date.now() * 1000000)],
+    };
+
+    console.log('[Ledger Service] Transferring to subaccount:', {
+      to_owner: toPrincipal.toString(),
+      to_subaccount: Array.from(toSubaccount).map(b => b.toString(16).padStart(2, '0')).join(''),
+      amount: amount + ' ckTestBTC',
+      amountSatoshis: amountBigInt.toString(),
+    });
+
+    const result = await actor.icrc1_transfer(transferArgs);
+
+    if ('Ok' in result && result.Ok !== undefined) {
+      const blockIndex = result.Ok.toString();
+      console.log('[Ledger Service] Transfer to subaccount successful, block index:', blockIndex);
+      return { success: true, blockIndex };
+    } else if ('Err' in result && result.Err !== undefined) {
+      const error = formatTransferError(result.Err);
+      console.error('[Ledger Service] Transfer to subaccount failed:', error);
+      return { success: false, error };
+    } else {
+      console.error('[Ledger Service] Transfer to subaccount failed: Unknown error');
+      return { success: false, error: 'Unknown transfer error' };
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Transfer to subaccount failed';
+    console.error('[Ledger Service] Transfer to subaccount error:', error);
+    return { success: false, error: errorMessage };
+  }
 };
 
 /**

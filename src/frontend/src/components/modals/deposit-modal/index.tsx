@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import Modal from '@/components/shared/modal';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import QRCode from '@/components/shared/qr-code';
-import { Copy, CheckCircle, AlertCircle, Wallet, Building2, Bitcoin } from 'lucide-react';
+import { Copy, CheckCircle, AlertCircle, Wallet, Bitcoin } from 'lucide-react';
 
 interface DepositCapabilities {
   canDepositFromCustodial: boolean;
@@ -71,78 +65,79 @@ const DepositModal: React.FC<DepositModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Deposit TestBTC</DialogTitle>
-          <DialogDescription>
-            Send TestBTC to this address to deposit ckTestBTC to your wallet.
-          </DialogDescription>
-        </DialogHeader>
+    <Modal
+      open={open}
+      onOpenChange={handleClose}
+      title="Deposit TestBTC"
+      description="Send TestBTC to this address to deposit ckTestBTC to your wallet."
+      size="sm"
+    >
+      <div className="space-y-4 w-full">
+        {/* Deposit Capability Status */}
+        {depositCapabilities && (
+          <div className="p-2 bg-gray-50 rounded-lg border">
+            <div className="flex items-center space-x-1.5 mb-2">
+              <Bitcoin className="h-4 w-4 text-orange-600" />
+              <span className="text-sm font-medium text-gray-700">Deposit Options</span>
+            </div>
 
-        <div className="space-y-4">
-          {/* Deposit Capability Status */}
-          {depositCapabilities && (
-            <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center space-x-2 mb-3">
-                <Bitcoin className="h-4 w-4 text-orange-600" />
-                <span className="text-sm font-medium text-gray-700">Deposit Options</span>
-              </div>
-
-              <div className="space-y-2">
-                {/* Personal to Custodial Deposit */}
-                {depositCapabilities.canDepositFromPersonal && (
-                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                    <div className="flex items-center space-x-2">
-                      <Wallet className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm">Personal → Custodial</span>
+            <div className="space-y-1.5">
+              {/* Personal to Custodial Deposit */}
+              {depositCapabilities.canDepositFromPersonal && (
+                <div className="bg-white rounded border p-1.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-1.5">
+                      <Wallet className="h-4 w-4 text-blue-600 shrink-0" />
+                      <span className="text-xs">Personal → Custodial</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="text-blue-600">
-                        {depositCapabilities.personalBalance} ckTestBTC
-                      </Badge>
-                      {depositCapabilities.requiresSubaccountCreation && (
-                        <Badge variant="secondary" className="text-xs">
-                          Creates Account
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Bitcoin Testnet Deposit */}
-                <div className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div className="flex items-center space-x-2">
-                    <Bitcoin className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm">Bitcoin Testnet → Custodial</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {depositCapabilities.requiresBtcAddressCreation && (
-                      <Badge variant="secondary" className="text-xs">
-                        Creates BTC Address
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-green-600">
-                      Available
+                    <Badge variant="outline" className="text-blue-600 text-xs shrink-0">
+                      {depositCapabilities.personalBalance} ckTestBTC
                     </Badge>
                   </div>
+                  {depositCapabilities.requiresSubaccountCreation && (
+                    <div className="flex justify-end">
+                      <Badge variant="secondary" className="text-xs">
+                        Creates Account
+                      </Badge>
+                    </div>
+                  )}
                 </div>
+              )}
 
-                {/* No deposit options */}
-                {!depositCapabilities.canDeposit && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
-                      No deposit options available. Use the faucet to get test tokens first.
-                    </AlertDescription>
-                  </Alert>
+              {/* Bitcoin Testnet Deposit */}
+              <div className="bg-white rounded border p-1.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Bitcoin className="h-4 w-4 text-orange-600 shrink-0" />
+                    <span className="text-xs">Bitcoin Testnet → Custodial</span>
+                  </div>
+                  <Badge variant="outline" className="text-green-600 text-xs shrink-0">
+                    Available
+                  </Badge>
+                </div>
+                {depositCapabilities.requiresBtcAddressCreation && (
+                  <div className="flex justify-end">
+                    <Badge variant="secondary" className="text-xs">
+                      Creates BTC Address
+                    </Badge>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
-        </div>
 
-        <div className="flex flex-col items-center space-y-4">
+              {/* No deposit options */}
+              {!depositCapabilities.canDeposit && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    No deposit options available. Use the faucet to get test tokens first.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col items-center space-y-4 w-full">
           {(loading || addressLoading) ? (
             <div className="flex flex-col items-center space-y-4 p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -150,16 +145,18 @@ const DepositModal: React.FC<DepositModalProps> = ({
             </div>
           ) : address ? (
             <>
-              <QRCode
-                value={address}
-                size={200}
-                className="border rounded-lg p-4"
-              />
+              <div className="flex justify-center w-full">
+                <QRCode
+                  value={address}
+                  size={200}
+                  className="border rounded-lg p-4"
+                />
+              </div>
 
               <div className="w-full p-3 bg-gray-50 rounded-lg border">
                 <p className="text-sm font-medium text-gray-700 mb-2">TestBTC Address:</p>
-                <div className="flex items-center space-x-2">
-                  <code className="flex-1 text-xs font-mono bg-white p-2 rounded border break-all">
+                <div className="flex items-start space-x-2 min-w-0">
+                  <code className="flex-1 text-xs font-mono bg-white p-2 rounded border break-all overflow-hidden min-w-0">
                     {address}
                   </code>
                   <Button
@@ -177,7 +174,7 @@ const DepositModal: React.FC<DepositModalProps> = ({
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 text-center space-y-1">
+              <div className="text-xs text-gray-500 text-center space-y-1 w-full">
                 <p>• Only send TestBTC to this address</p>
                 <p>• Minimum deposit: 0.00001 TestBTC</p>
                 <p>• It may take several confirmations to appear in your balance</p>
@@ -196,8 +193,8 @@ const DepositModal: React.FC<DepositModalProps> = ({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 };
 

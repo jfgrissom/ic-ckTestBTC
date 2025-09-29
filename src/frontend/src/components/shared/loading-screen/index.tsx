@@ -1,5 +1,5 @@
-import React from 'react';
-import type { LoadingScreenProps } from './types';
+import React from 'react'
+import type { LoadingScreenProps } from './types'
 
 /**
  * LoadingScreen component for displaying app initialization states
@@ -35,7 +35,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ error, onRetry }) 
                 Initializing Services...
               </h2>
               <p className="text-white/80 text-sm mb-4">
-                Setting up Connect2IC and backend connections...
+                Setting up Internet Identity and backend connections...
               </p>
               <div className="flex justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
@@ -45,8 +45,8 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ error, onRetry }) 
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LoadingScreen;
-export type { LoadingScreenProps } from './types';
+export default LoadingScreen
+export type { LoadingScreenProps } from './types'

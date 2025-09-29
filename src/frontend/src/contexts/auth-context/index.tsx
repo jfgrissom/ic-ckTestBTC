@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 /**
  * AuthProvider component using @dfinity/auth-client
- * Replaces Connect2IC for authentication management
+ * Manages Internet Identity authentication and actor lifecycle
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

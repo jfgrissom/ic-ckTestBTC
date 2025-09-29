@@ -1,5 +1,5 @@
 /**
- * Service initialization for Connect2IC and backend dependencies
+ * Service initialization for backend dependencies
  * Validates environment variables and ensures services are ready before app startup
  */
 

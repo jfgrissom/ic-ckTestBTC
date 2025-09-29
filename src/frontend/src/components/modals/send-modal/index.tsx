@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import Modal, { ModalFooterActions } from '@/components/shared/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -170,16 +163,30 @@ const SendModal: React.FC<SendModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Send ckTestBTC</DialogTitle>
-          <DialogDescription>
-            Send ckTestBTC tokens to another Principal ID on the Internet Computer.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 pb-4">
+    <Modal
+      open={open}
+      onOpenChange={handleClose}
+      title="Send ckTestBTC"
+      description="Send ckTestBTC tokens to another Principal ID on the Internet Computer."
+      size="md"
+      footer={
+        <ModalFooterActions
+          onCancel={handleClose}
+          onConfirm={handleSend}
+          cancelText="Cancel"
+          confirmText="Send ckTestBTC"
+          loading={isSubmitting || loading}
+          confirmDisabled={
+            !recipient ||
+            !amount ||
+            (transferCapabilities &&
+             !transferCapabilities.canTransferPersonal &&
+             !transferCapabilities.canTransferCustodial)
+          }
+        />
+      }
+    >
+      <div className="space-y-4 pb-4">
           {/* Transfer Method Selection for ckTestBTC - Always show when ckTestBTC is selected */}
           {transferCapabilities && (
             <div className="border border-blue-200 bg-blue-50 rounded-lg p-3">
@@ -365,28 +372,7 @@ const SendModal: React.FC<SendModalProps> = ({
             <p>• ckTestBTC is an ICRC-2 token representing Bitcoin testnet</p>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting || loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={
-              isSubmitting ||
-              loading ||
-              !recipient ||
-              !amount ||
-              (transferCapabilities &&
-               !transferCapabilities.canTransferPersonal &&
-               !transferCapabilities.canTransferCustodial)
-            }
-          >
-            {isSubmitting || loading ? 'Sending...' : `Send ckTestBTC`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 };
 

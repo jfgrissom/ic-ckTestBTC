@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import Modal, { ModalFooterActions } from '@/components/shared/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Building2, Wallet } from 'lucide-react';
+import { AlertCircle, Building2 } from 'lucide-react';
 
 interface WithdrawCapabilities {
   canWithdrawFromCustodial: boolean;
@@ -134,16 +127,28 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Withdraw to TestBTC</DialogTitle>
-          <DialogDescription>
-            Send ckTestBTC to a TestBTC address on the Bitcoin testnet.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <Modal
+      open={open}
+      onOpenChange={handleClose}
+      title="Withdraw to TestBTC"
+      description="Send ckTestBTC to a TestBTC address on the Bitcoin testnet."
+      size="sm"
+      footer={
+        <ModalFooterActions
+          onCancel={handleClose}
+          onConfirm={handleWithdraw}
+          cancelText="Cancel"
+          confirmText="Withdraw"
+          loading={loading}
+          confirmDisabled={
+            !address ||
+            !amount ||
+            (withdrawCapabilities && !withdrawCapabilities.canWithdrawFromCustodial)
+          }
+        />
+      }
+    >
+      <div className="space-y-4">
           {/* Withdrawal Capability Status */}
           {withdrawCapabilities && (
             <div className="p-3 bg-gray-50 rounded-lg border">
@@ -256,25 +261,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({
             <p>• Withdrawals may take time to confirm on the Bitcoin testnet</p>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleWithdraw}
-            disabled={
-              loading ||
-              !address ||
-              !amount ||
-              (withdrawCapabilities && !withdrawCapabilities.canWithdrawFromCustodial)
-            }
-          >
-            {loading ? 'Processing...' : 'Withdraw'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 };
 

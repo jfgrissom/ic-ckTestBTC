@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import Modal from '@/components/shared/modal';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import QRCode from '@/components/shared/qr-code';
@@ -71,16 +65,14 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{instructions.title}</DialogTitle>
-          <DialogDescription>
-            {instructions.description}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-4">
+    <Modal
+      open={open}
+      onOpenChange={handleClose}
+      title={instructions.title}
+      description={instructions.description}
+      size="md"
+    >
+      <div className="space-y-4 mt-4">
           {/* Address Display */}
           {receiveAddress ? (
             <>
@@ -100,7 +92,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
                   {instructions.addressLabel}
                 </p>
                 <div className="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border">
-                  <code className="flex-1 text-xs font-mono break-all leading-relaxed">
+                  <code className="flex-1 text-xs font-mono break-all leading-relaxed overflow-hidden">
                     {receiveAddress}
                   </code>
                   <Button
@@ -124,7 +116,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
                   <Info className="h-4 w-4 shrink-0 mt-0.5" />
                   <AlertDescription className="text-xs">
                     <strong>Alternative:</strong> Your Principal ID for direct ICRC ckTestBTC transfers:
-                    <code className="block text-xs font-mono bg-gray-100 px-2 py-1 rounded mt-1 break-all">
+                    <code className="block text-xs font-mono bg-gray-100 px-2 py-1 rounded mt-1 break-all overflow-hidden">
                       {userPrincipal}
                     </code>
                   </AlertDescription>
@@ -159,8 +151,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 };
 
