@@ -1,0 +1,83 @@
+name: Playwright Integration Tests
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  playwright-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: '0.29.1'
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start dfx
+        run: |
+          dfx start --background --clean
+          dfx identity use default
+
+      - name: Deploy canisters
+        run: |
+          dfx deploy mock_cktestbtc_ledger
+          dfx deploy mock_cktestbtc_minter
+          dfx deploy backend
+          dfx deploy frontend
+
+      - name: Start frontend dev server
+        run: |
+          npm run dev &
+          # Wait for dev server to be ready
+          npx wait-on http://127.0.0.1:5173 -t 60000
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          BASE_URL: http://127.0.0.1:5173
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-screenshots
+          path: tests/playwright/screenshots/
+          retention-days: 7
+
+      - name: Stop dfx
+        if: always()
+        run: dfx stop
